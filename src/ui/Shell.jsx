@@ -2,6 +2,7 @@ import { createSignal, createMemo, createEffect, For, Show, Switch, Match, onCle
 import { createStore } from 'solid-js/store';
 import FancySelect from './FancySelect.jsx';
 import { createScheduler, beijingNow, parseDt, esc } from './anim.js';
+import { renderShareCard } from './share.js';
 
 /**
  * 三式共用的外壳：起式页（时间、所问、设置）→ 自动播放各阶段动画（可跳过）→ 结果（原文 / 过程）。
@@ -36,6 +37,8 @@ export default function Shell(props) {
   const [foot, setFoot] = createSignal('');
   const [copyLabel, setCopyLabel] = createSignal('复制文本');
   const [sealOn, setSealOn] = createSignal(false);
+  const [shot, setShot] = createSignal(null); // 生成的分享图（data URL）
+  const [shotBusy, setShotBusy] = createSignal(false);
 
   const impacts = createMemo(() => {
     const a = parseDt(dt());
@@ -90,6 +93,13 @@ export default function Shell(props) {
     setFoot(art.footer(C));
     ctrl = art.board.mount(host, C, sched);
     ritual();
+  }
+  async function makeShot() {
+    if (shotBusy()) return;
+    setShotBusy(true);
+    try { setShot(await renderShareCard({ host, art, C, question: q, meta: art.board.meta(C, art.stages.length - 1) })); }
+    catch (e) { setShot('error'); }
+    finally { setShotBusy(false); }
   }
   async function copy() {
     const ok = () => { setCopyLabel('已复制'); setTimeout(() => setCopyLabel('复制文本'), 1600); };
@@ -224,9 +234,27 @@ export default function Shell(props) {
             </ol>
             <div class="explain" innerHTML={explain()} />
           </div>
-          <div class="row"><button type="button" onClick={again}>{art.againLabel}</button></div>
+          <div class="row">
+            <button type="button" onClick={again}>{art.againLabel}</button>
+            <button type="button" onClick={makeShot} disabled={shotBusy()}>{shotBusy() ? '正在生成…' : '保存图片'}</button>
+          </div>
         </aside>
       </section>
+      <Show when={shot()}>
+        <div class="share-dlg" role="dialog" aria-modal="true" aria-label="盘面图片" onClick={(e) => { if (e.target === e.currentTarget) setShot(null); }}
+          onKeyDown={(e) => { if (e.key === 'Escape') setShot(null); }}>
+          <div class="box">
+            <Show when={shot() !== 'error'} fallback={<p class="small">这个浏览器无法生成图片，可以直接截屏保存。</p>}>
+              <img src={shot()} alt={art.name + '盘面'} />
+              <p class="small">如果点“下载图片”没有反应，可以长按或右键图片另存。</p>
+            </Show>
+            <div class="row">
+              <button type="button" onClick={() => setShot(null)} ref={(el) => queueMicrotask(() => el.focus())}>关闭</button>
+              <Show when={shot() !== 'error'}><a class="primary" href={shot()} download={`${art.name}-${(C?.input.text || '').replace(/[: ]/g, '-')}.png`}>下载图片</a></Show>
+            </div>
+          </div>
+        </div>
+      </Show>
     </>
   );
 }
