@@ -23,10 +23,10 @@ export async function renderShareCard({ host, art, C, question, meta }) {
     <div class="sc-board"></div>
     <div class="sc-foot">三式排盘 · ${stamp} · 只排盘不断吉凶</div>`;
   const clone = host.cloneNode(true);
-  // 截图用的盘面去掉三维翻转（部分浏览器无法把它画进图片），并盖上印章
+  // 截图用的盘面去掉三维翻转（部分浏览器无法把它画进图片），不带“盘成”印章
   clone.classList.add('snap');
   clone.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
-  clone.querySelectorAll('.seal').forEach((el) => el.classList.remove('off'));
+  clone.querySelectorAll('.seal').forEach((el) => el.remove());
   card.querySelector('.sc-board').appendChild(clone);
   document.body.appendChild(card);
   try {

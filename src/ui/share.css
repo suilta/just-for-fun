@@ -15,9 +15,6 @@
 .snap .tarot .tc.up .front { transform: none; }
 .snap .tarot .tc:not(.up) .front { display: none; }
 .snap .ly .coin .cin { transform: none !important; }
-/* 竖排印章在图片里会错位，截图时改为横排 */
-.snap .seal { writing-mode: horizontal-tb; white-space: nowrap; left: auto; top: 10px; right: 10px; opacity: .9 !important;
-  transform: rotate(-8deg) scale(.5) !important; transform-origin: 100% 0; }
 
 /* 预览弹窗 */
 .share-dlg { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: rgba(0, 0, 0, .5);
