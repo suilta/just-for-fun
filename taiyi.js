@@ -137,15 +137,16 @@
     const gOf = (p) => GONG_OF16[p];
     const tyG = taiyi;
     const zheng = ZHENG[tyG], ringD = mod(r16(sf) - r16(zheng), 16);
-    if (sf === zheng) add('掩', `始击${sf}临太乙所在${GONG[tyG].name}宫正位`);
+    // 太乙宫化为十六神位后比较：同位为掩；顺数一位外辰击、逆数一位内辰击；二位为外、内宫击
+    if (ringD === 0) add('掩', `始击${sf}与太乙同临${zheng}位`);
     if (gOf(wc) === tyG) add('囚', `文昌${wc}与太乙同在${GONG[tyG].name}宫`);
     [['主大将', hg], ['主参将', hv], ['客大将', ag], ['客参将', av]].forEach(([n, g]) => { if (g === tyG) add('囚', `${n}与太乙同在${GONG[tyG].name}宫`); });
     [['主大将', hg], ['主参将', hv]].forEach(([n1, g1]) => [['客大将', ag], ['客参将', av]].forEach(([n2, g2]) => { if (g1 === g2 && g1 !== 5) add('关', `${n1}与${n2}同在${GONG[g1].name}宫`); }));
     if (gOf(wc) === opposite(tyG)) add('对', `文昌${wc}在太乙对宫${GONG[opposite(tyG)].name}`);
     if (gOf(sf) === opposite(tyG)) add('格', `始击${sf}在太乙对宫${GONG[opposite(tyG)].name}`);
     [['客大将', ag], ['客参将', av]].forEach(([n, g]) => { if (g === opposite(tyG)) add('格', `${n}在太乙对宫${GONG[g].name}`); });
-    if (ringD === 1 || ringD === 15) add('击', `始击${sf}在太乙${GONG[tyG].name}宫正位相邻之辰（辰击）`);
-    else if (adjacent(gOf(sf), tyG)) add('击', `始击${sf}在太乙邻宫${GONG[gOf(sf)].name}（宫击）`);
+    const JI = { 1: '外辰击', 15: '内辰击', 2: '外宫击', 14: '内宫击' }[ringD];
+    if (JI) add('击', `始击${sf}在太乙${zheng}位${ringD < 8 ? '顺' : '逆'}数第 ${ringD < 8 ? ringD : 16 - ringD} 位（${JI}）`);
     const pressers = [['主大将', hg], ['主参将', hv], ['客大将', ag], ['客参将', av]].filter(([, g]) => adjacent(g, tyG));
     pressers.forEach(([n, g]) => add('迫', `${n}在太乙邻宫${GONG[g].name}`));
     const sides = new Set([gOf(sf), hg, hv, ag, av].filter((g) => adjacent(g, tyG)));
