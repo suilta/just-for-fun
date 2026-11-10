@@ -117,3 +117,25 @@
   --bg: #0f1514; --surface: #161e1c; --cell: #1b2422; --ink: #e2ebe9; --muted: #93a5a1; --line: #2c3a37;
   --accent: #7cc9c2; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(124, 201, 194, .15);
 }
+
+/* 本命盘：夜空紫 */
+:root[data-art="natal"] {
+  --bg: #ebe9f1; --surface: #f8f7fb; --cell: #fcfbfe; --ink: #1d1a29; --muted: #625d75; --line: #d0cbdc;
+  --accent: #5a3f92; --gold: #9a6f12; --cinnabar: #b0362a; --jade: #2e6f8e; --hl: rgba(90, 63, 146, .12);
+  --el-fire: rgba(206, 92, 60, .16); --el-earth: rgba(120, 140, 60, .16); --el-air: rgba(214, 178, 60, .18); --el-water: rgba(60, 120, 190, .16);
+  --el-fire-ink: #b4472a; --el-earth-ink: #5b7a2c; --el-air-ink: #9a7a12; --el-water-ink: #2c6a9a;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-art="natal"]:not([data-theme="light"]) {
+    --bg: #12101a; --surface: #1a1724; --cell: #1f1b2b; --ink: #e9e5f4; --muted: #a29cb8; --line: #352f47;
+    --accent: #b9a1f0; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cb6d9; --hl: rgba(185, 161, 240, .15);
+    --el-fire: rgba(232, 112, 95, .18); --el-earth: rgba(150, 180, 90, .16); --el-air: rgba(230, 200, 100, .16); --el-water: rgba(100, 160, 230, .18);
+    --el-fire-ink: #f08a70; --el-earth-ink: #a8c878; --el-air-ink: #e6c860; --el-water-ink: #7ab8f0;
+  }
+}
+:root[data-art="natal"][data-theme="dark"] {
+  --bg: #12101a; --surface: #1a1724; --cell: #1f1b2b; --ink: #e9e5f4; --muted: #a29cb8; --line: #352f47;
+  --accent: #b9a1f0; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cb6d9; --hl: rgba(185, 161, 240, .15);
+  --el-fire: rgba(232, 112, 95, .18); --el-earth: rgba(150, 180, 90, .16); --el-air: rgba(230, 200, 100, .16); --el-water: rgba(100, 160, 230, .18);
+  --el-fire-ink: #f08a70; --el-earth-ink: #a8c878; --el-air-ink: #e6c860; --el-water-ink: #7ab8f0;
+}

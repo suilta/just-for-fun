@@ -14,6 +14,11 @@ import { toLunar } from '../src/core/lunar.js';
 import * as MH from '../src/arts/meihua/core.js';
 import * as XL from '../src/arts/xiaoliuren/core.js';
 import * as LY from '../src/arts/liuyao/core.js';
+import * as NA from '../src/arts/natal/core.js';
+import { placeOf, CITIES } from '../src/arts/natal/places.js';
+import { natalImpacts } from '../src/arts/natal/impacts.js';
+import * as Astro from 'astronomy-engine';
+import { readFileSync } from 'node:fs';
 const QM = { ...astro, ...cal, ...qimen };
 
 let pass = 0, fail = 0;
@@ -345,6 +350,90 @@ for (const [yr, label, kook, gong, wc, home, sf, away, pats] of TY_CASES) {
   check('摇钱取值', [...seenV].sort().join() === '6,7,8,9');
   const pending = LY.cast(2026, 11, 10, 14, 30);
   check('未摇满不生成原文', LY.toText(pending, '') === '（起卦尚未完成）' && pending.tosses.length === 0);
+}
+
+// ── 西方占星本命盘 ──
+{
+  const sec = (a, b) => Math.abs(NA.angDiff(a, b)) * 3600;
+  // 1. 与 Swiss Ephemeris（Moshier）逐项对照：50 组出生数据
+  const F = JSON.parse(readFileSync(new URL('./fixtures/natal-swe.json', import.meta.url)));
+  const LIM = { sun: 5, moon: 20, mercury: 15, venus: 15, mars: 15, jupiter: 20, saturn: 20, uranus: 20, neptune: 25, pluto: 15 };
+  for (const c of F.cases) {
+    const [y, m, d, h, mi] = c.utc, utcMs = Date.UTC(y, m - 1, d, h, mi), pl = { lat: c.lat, lon: c.lon, utcMs };
+    const C = NA.cast(y, m, d, h, mi, { extra: true }, pl);
+    const tag = c.utc.join('-') + ` ${c.lat},${c.lon}`;
+    for (const b of C.bodies) check(`本命盘 ${b.zh} ${tag}`, sec(b.lon, c.pos[b.key]) < LIM[b.key], `${(sec(b.lon, c.pos[b.key])).toFixed(1)}″`);
+    for (const b of C.bodies) check(`逆行方向 ${b.zh} ${tag}`, Math.sign(b.speed) === Math.sign(c.speed[b.key]) || Math.abs(c.speed[b.key]) < 0.002);
+    check(`真交点 ${tag}`, sec(C.points[0].lon, c.pos.trueNode) < 60);
+    check(`南北交点相对 ${tag}`, Math.abs(Math.abs(NA.angDiff(C.points[0].lon, C.points[1].lon)) - 180) < 1e-9);
+    check(`莉莉丝 ${tag}`, sec(C.points[2].lon, c.pos.lilith) < 600);
+    check(`平均交点 ${tag}`, sec(NA.cast(y, m, d, h, mi, { node: 'mean' }, pl).points[0].lon, c.pos.meanNode) < 3);
+    check(`上升 ${tag}`, sec(C.steps.angles.asc, c.asc) < 25, `${sec(C.steps.angles.asc, c.asc).toFixed(1)}″`);
+    check(`天顶 ${tag}`, sec(C.steps.angles.mc, c.mc) < 25);
+    for (const hs of ['P', 'K', 'O', 'R', 'C', 'E', 'W']) {
+      const H = NA.cast(y, m, d, h, mi, { house: hs }, pl).steps.houses;
+      const worst = Math.max(...c.houses[hs].map((v, i) => sec(H.cusps[i + 1], v)));
+      check(`宫制 ${hs} ${tag}`, H.used === hs && worst < 30, `${worst.toFixed(1)}″`);
+    }
+    for (const k of ['lahiri', 'fagan']) {
+      const S = NA.cast(y, m, d, h, mi, { zodiac: k }, pl);
+      check(`恒星黄道 ${k} ${tag}`, sec(S.bodies[0].lon, c.sid[k].sun) < 6 && Math.abs(S.steps.zodiac.ayanamsa - c.sid[k].ayan) * 3600 < 2);
+    }
+    // 宫位归属：每颗星都落在自己宫头与下一宫头之间
+    const cs = C.steps.houses.cusps;
+    for (const b of C.bodies) check(`宫位归属 ${b.zh} ${tag}`, NA.mod(b.lon - cs[b.house]) < NA.mod(cs[b.house % 12 + 1] - cs[b.house]));
+  }
+  // 2. Meeus《天文算法》例题：例 47.a 月亮视黄经 133.167265°，例 33.a 金星视黄经 313.08102°（均为力学时 0 时）
+  const tt = (y, m, d) => Astro.AstroTime.FromTerrestrialTime(Astro.MakeTime(new Date(Date.UTC(y, m - 1, d))).ut);
+  const moon = Astro.Ecliptic(Astro.GeoVector('Moon', tt(1992, 4, 12), true)).elon;
+  const venus = Astro.Ecliptic(Astro.GeoVector('Venus', tt(1992, 12, 20), true)).elon;
+  check('Meeus 47.a 月亮', sec(moon, 133.167265) < 5, `${sec(moon, 133.167265).toFixed(1)}″`);
+  check('Meeus 33.a 金星', sec(venus, 313.08102) < 5, `${sec(venus, 313.08102).toFixed(1)}″`);
+  // 与本项目自算的太阳黄经互相印证
+  for (let i = 0; i < 200; i++) {
+    const ms = Date.UTC(1950, 0, 1) + Math.floor(((i * 7919) % 1000) / 1000 * 100 * 365.25 * 864e5);
+    const C = NA.cast(2000, 1, 1, 0, 0, {}, { lat: 30, lon: 120, utcMs: ms });
+    check('太阳黄经与节气算法一致', sec(C.bodies[0].lon, astro.sunApparentLon(astro.jdFromBeijing(...(() => { const d = new Date(ms + 8 * 3600e3); return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes()]; })()))) < 30);
+  }
+  // 3. 时区与夏令时
+  const z = (a, tz) => NA.localToUtc(...a, tz);
+  const iso = (r) => new Date(r.utcMs).toISOString().slice(0, 16);
+  check('中国 1988 夏令时', iso(z([1988, 7, 1, 12, 0], 'Asia/Shanghai')) === '1988-07-01T03:00' && z([1988, 7, 1, 12, 0], 'Asia/Shanghai').dst);
+  check('中国 1988 冬季', iso(z([1988, 1, 1, 12, 0], 'Asia/Shanghai')) === '1988-01-01T04:00' && !z([1988, 1, 1, 12, 0], 'Asia/Shanghai').dst);
+  check('中国 1992 无夏令时', !z([1992, 7, 1, 12, 0], 'Asia/Shanghai').dst);
+  check('纽约拨快空档', z([2021, 3, 14, 2, 30], 'America/New_York').gap && iso(z([2021, 3, 14, 2, 30], 'America/New_York')) === '2021-03-14T07:30');
+  check('纽约拨回重叠', z([2021, 11, 7, 1, 30], 'America/New_York').ambiguous && iso(z([2021, 11, 7, 1, 30], 'America/New_York')) === '2021-11-07T05:30');
+  check('悉尼夏令时（南半球一月）', z([2024, 1, 15, 12, 0], 'Australia/Sydney').offset === 11 * 3600);
+  check('固定偏移', iso(z([2000, 1, 1, 0, 0], 'UTC+5:30')) === '1999-12-31T18:30' && iso(z([2000, 1, 1, 0, 0], 'UTC-8')) === '2000-01-01T08:00');
+  // 4. 相位：对称、容许度内、最紧在前；时间不详不排宫位
+  const C0 = NA.cast(1990, 6, 15, 12, 30, { minor: true }, { lat: 39.9, lon: 116.4, tz: 'Asia/Shanghai' });
+  check('相位在容许度内', C0.aspects.every((a) => a.orb <= a.lim + 1e-9));
+  check('相位按容许度排序', C0.aspects.every((a, i) => i === 0 || C0.aspects[i - 1].orb <= a.orb));
+  check('相位每对只出现一次', new Set(C0.aspects.map((a) => [a.p, a.q].sort().join())).size === C0.aspects.length);
+  const lonK = (k) => [...C0.bodies, ...C0.points].find((b) => b.key === k)?.lon ?? (k === 'asc' ? C0.steps.angles.asc : C0.steps.angles.mc);
+  check('相位角度核对', C0.aspects.every((a) => Math.abs(Math.abs(Math.abs(NA.angDiff(lonK(a.p), lonK(a.q))) - a.a) - a.orb) < 1e-9));
+  const U = NA.cast(1990, 6, 15, 12, 30, {}, { lat: 39.9, lon: 116.4, tz: 'Asia/Shanghai', timeKnown: false });
+  check('时间不详不排宫位', !U.steps.houses && !U.steps.angles && U.bodies.every((b) => !b.house) && U.aspects.every((a) => a.p !== 'asc' && a.q !== 'mc'));
+  check('时间不详注明月亮范围', /月亮当天在/.test(NA.toText(U, '')));
+  check('北京 1990 年 6 月是夏令时', /UTC\+9，夏令时/.test(NA.toText(C0, '')));
+  // 5. 极圈内 Placidus 退回 Porphyry
+  const polar = NA.cast(2000, 6, 21, 12, 0, { house: 'P' }, { lat: 69.65, lon: 18.96, tz: 'Europe/Oslo' });
+  check('极圈改用 Porphyry', polar.steps.houses.used === 'O' && /极圈/.test(polar.steps.houses.note));
+  // 6. 恒星黄道整宫制：宫头为星座起点
+  const ws = NA.cast(1990, 6, 15, 12, 30, { house: 'W', zodiac: 'lahiri' }, { lat: 39.9, lon: 116.4, tz: 'Asia/Shanghai' });
+  check('恒星整宫制', ws.steps.houses.cusps.slice(1).every((v) => Math.abs(v % 30) < 1e-9 || Math.abs(v % 30 - 30) < 1e-9) && NA.signOf(ws.steps.houses.cusps[1]) === NA.signOf(ws.steps.angles.asc));
+  // 7. 福点昼夜公式
+  const night = NA.cast(1990, 6, 15, 23, 0, { extra: true, pofSect: true }, { lat: 39.9, lon: 116.4, tz: 'Asia/Shanghai' });
+  const pof = night.points.find((p) => p.key === 'pof');
+  check('夜生福点', !pof.day && Math.abs(NA.angDiff(pof.lon, night.steps.angles.asc + night.bodies[0].lon - night.bodies[1].lon)) < 1e-9);
+  // 8. 外壳接口：城市、自定义地点、各设置的影响说明
+  check('城市表', Object.keys(CITIES).length > 50 && placeOf({ city: 'london' }).tz === 'Europe/London');
+  check('自定义地点', placeOf({ city: 'custom', lat: '-33.87', lon: '151.21', tz: 'Australia/Sydney' }).lat === -33.87);
+  check('自定义地点填错退回北京', placeOf({ city: 'custom', lat: 'abc', lon: '' }).fallback === true);
+  for (const x of [{ city: 'beijing', tk: 'yes' }, { city: 'beijing', tk: 'no' }, { city: 'custom', lat: '70', lon: '20', tz: 'UTC+1' }]) {
+    const im = natalImpacts([1990, 6, 15, 12, 30], { ...NA.DEFAULT_OPTS, extra: true }, x);
+    check('影响说明 ' + JSON.stringify(x), im.zodiac && im.node && im.orbs && (x.tk === 'no' || im.house));
+  }
 }
 
 console.log(`课体分布（${N} 课）：`, seen);

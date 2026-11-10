@@ -6,6 +6,7 @@ import tarot from './tarot/index.js';
 import meihua from './meihua/index.js';
 import xiaoliuren from './xiaoliuren/index.js';
 import liuyao from './liuyao/index.js';
+import natal from './natal/index.js';
 
 // 已上线的各式；首页卡片在 pages/Home.jsx
-export const ARTS = [qimen, liuren, taiyi, bazi, meihua, liuyao, xiaoliuren, tarot];
+export const ARTS = [qimen, liuren, taiyi, bazi, meihua, liuyao, xiaoliuren, tarot, natal];

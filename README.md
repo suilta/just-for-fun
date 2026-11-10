@@ -1,6 +1,6 @@
 # 三式
 
-奇门遁甲、大六壬、太乙神数（三式）、八字、梅花易数、六爻、小六壬与塔罗的排盘演示。每一式先只填时间和所问，起盘后把推演过程分八步做成动画，最后生成一段完整的盘面文字，可以交给 AI 或懂行的人解读。
+奇门遁甲、大六壬、太乙神数（三式）、八字、梅花易数、六爻、小六壬、塔罗与西方占星本命盘的排盘演示。每一式先只填时间和所问，起盘后把推演过程分八步做成动画，最后生成一段完整的盘面文字，可以交给 AI 或懂行的人解读。
 
 ## 使用
 
@@ -11,7 +11,7 @@ npm test         # 规则测试（古籍课例、外部软件对照、随机课�
 npm run build    # 打包成一个独立的 dist/index.html
 ```
 
-`dist/index.html` 不依赖任何外部资源，直接放到网站上即可。地址后加 `#qimen`、`#liuren`、`#taiyi`、`#bazi`、`#meihua`、`#liuyao`、`#xiaoliuren`、`#tarot` 可直达对应页面。
+`dist/index.html` 不依赖任何外部资源，直接放到网站上即可。地址后加 `#qimen`、`#liuren`、`#taiyi`、`#bazi`、`#meihua`、`#liuyao`、`#xiaoliuren`、`#tarot`、`#natal` 可直达对应页面。
 
 ## 结构
 
@@ -28,12 +28,15 @@ src/
     liuyao/        六爻
     xiaoliuren/    小六壬
     tarot/         塔罗（cards.js 牌库，art.js 自绘牌面）
+    natal/         西方占星本命盘（places.js 城市与时区，impacts.js 设置影响）
   ui/
     Shell.jsx      共用外壳：起式页、设置面板、八步动画调度、跳过、结果页
     FancySelect.jsx 带说明的下拉
     anim.js        动画时间轴（定时器与逐帧补间，可一次取消）
+    share.js       盘面截图：把盘面排成卡片导出 PNG（html-to-image）
   pages/Home.jsx   首页
 tests/rules.test.js
+tests/fixtures/natal-swe.json  本命盘对照数据（Swiss Ephemeris 生成）
 ```
 
 新增一式时，在 `src/arts/` 下建同样的三个文件（算法、盘面、配置），再加进 `src/arts/index.js` 和首页卡片。
@@ -50,3 +53,4 @@ tests/rules.test.js
 - 六爻：京房纳甲。摇钱背记三、字记二，6 老阴、9 老阳为动；八宫世应、纳甲、六亲、按日干起六神、伏神取本宫纯卦同位爻、变卦、月建日辰旬空。测试以姤、复、大有、晋、涣、师之升等经典卦例核对。
 - 小六壬：大安起正月，月位起初一，日位起子时，起数之位算一；亦可报三数起课。测试确认与速算公式（月 + 日 + 时 − 2）÷ 6 一致。
 - 塔罗：七十八张，牌序按韦特体系；洗牌用加密级随机数（Fisher–Yates），牌由用户在扇形牌堆中亲手抽出，跳过时程序随机补齐并在原文中注明。牌面为本项目自绘，关键词为自撰的简短提示。
+- 本命盘：行星为地心视位置，用 astronomy-engine（MIT）计算；出生地钟表时间按 IANA 时区规则换成世界时，自动处理历史夏令时（中国 1986–1991 年等），拨快空档与拨回重叠会在原文中注明。上升、天顶与 Placidus、Koch、Regiomontanus、Campanus、Porphyry、等宫、整宫七种宫制按公式自算，极圈内象限宫制改用 Porphyry；真交点取月球密切轨道升交点；恒星黄道支持拉希里、费根-布拉德利。`tests/fixtures/natal-swe.json` 是用 Swiss Ephemeris（Moshier 星历）对 50 组随机出生数据算出的对照值（只用于测试，未打包进页面），行星、宫头、交点、岁差的差别都在 30 角秒以内；莉莉丝用 Meeus 平均远地点公式，与 Swiss Ephemeris 的修正值最多差约 7 角分。

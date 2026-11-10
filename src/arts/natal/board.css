@@ -1,0 +1,50 @@
+/* 本命盘：外圈黄道十二宫，内圈宫位，行星落在宫位圈内侧，中心画相位 */
+.na .board { background: var(--cell); border: 1px solid var(--line); border-radius: 50%; overflow: visible; }
+.na .board.done { box-shadow: 0 0 0 1px var(--gold), 0 0 24px var(--hl); }
+.na .chart { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; transition: opacity .5s; }
+.na .chart.dim { opacity: .35; }
+.na .ring { fill: none; stroke: var(--ink); stroke-width: 1; opacity: .55; }
+.na .ring.thin { stroke-width: .6; opacity: .35; }
+.na .sec { stroke: var(--line); stroke-width: .6; }
+.na .sec.fire { fill: var(--el-fire); } .na .sec.earth { fill: var(--el-earth); }
+.na .sec.air { fill: var(--el-air); } .na .sec.water { fill: var(--el-water); }
+.na .sg { font-family: var(--f-display); font-size: 12px; font-weight: 700; fill: var(--ink); }
+.na .tk { stroke: var(--ink); stroke-width: .5; opacity: .45; }
+.na .tk.mid { stroke-width: .7; } .na .tk.big { stroke-width: 1; opacity: .6; }
+.na .cusp { stroke: var(--muted); stroke-width: .7; transition: opacity .35s; }
+.na .cusp.ang { stroke: var(--ink); stroke-width: 1.1; }
+.na .hn { font-size: 9px; fill: var(--muted); font-family: var(--f-mono); transition: opacity .35s; }
+.na .axl { stroke: var(--accent); stroke-width: 2; stroke-linecap: round; transition: opacity .3s; }
+.na .axt { font-size: 10px; font-weight: 700; fill: var(--accent); font-family: var(--f-mono); }
+.na .ptk { stroke: var(--ink); stroke-width: .8; }
+.na .pdot { fill: var(--ink); }
+.na .pg { font-family: var(--f-display); font-size: 14px; font-weight: 900; fill: var(--ink); }
+.na .pd { font-family: var(--f-mono); font-size: 7.5px; fill: var(--muted); }
+.na .p { transition: opacity .3s; }
+.na .p.sun .pg, .na .p.moon .pg { fill: var(--accent); }
+.na .p.node .pg, .na .p.snode .pg, .na .p.lilith .pg, .na .p.pof .pg { fill: var(--muted); font-size: 12px; }
+.na .p.ruler .pg { fill: var(--cinnabar); }
+.na .p.ruler .pdot { fill: var(--cinnabar); }
+.na .al { stroke-width: 1; fill: none; transition: opacity .3s; }
+.na .al.tight { stroke-width: 1.6; }
+.na .al.conj { stroke: var(--gold); } .na .al.hard { stroke: var(--cinnabar); } .na .al.soft { stroke: var(--jade); }
+.na .al.minor { stroke: var(--muted); stroke-dasharray: 2 2; opacity: .8; }
+.na .pend { opacity: 0; }
+.na { display: grid; gap: 10px; }
+.na .center { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 18px; padding: 8px 14px; margin: 0 auto; justify-self: center;
+  border-radius: 10px; background: var(--surface); border: 1px solid var(--line); transition: opacity .5s; font-size: 12px; }
+.na .center .els, .na .center .mds { display: flex; gap: 10px; }
+.na .center .els span { display: grid; justify-items: center; font-size: 11px; color: var(--muted); line-height: 1.1; }
+.na .center .els b { font-family: var(--f-display); font-size: 18px; }
+.na .center .els .fire b { color: var(--el-fire-ink); } .na .center .els .earth b { color: var(--el-earth-ink); }
+.na .center .els .air b { color: var(--el-air-ink); } .na .center .els .water b { color: var(--el-water-ink); }
+.na .center .mds { color: var(--muted); }
+.na .center .mds b { color: var(--ink); font-family: var(--f-display); }
+.na .center .rl b { color: var(--cinnabar); font-family: var(--f-display); }
+.na .seal { top: auto; bottom: -4%; left: 84%; }
+.na .seal.off { transform: translate(-50%, 0) scale(1.6); }
+.na .seal:not(.off) { transform: translate(-50%, 0) rotate(-8deg) scale(.7); }
+.legend .lg { display: inline-block; width: 16px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 4px; }
+.legend .lg.conj { border-color: var(--gold); } .legend .lg.hard { border-color: var(--cinnabar); } .legend .lg.soft { border-color: var(--jade); }
+.legend .lg.minor { border-top-style: dashed; border-color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .na * { transition: none !important; animation: none !important; } }
