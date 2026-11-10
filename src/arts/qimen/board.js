@@ -82,7 +82,7 @@ export function mount(host, C, sched) {
   }
   function clearMarks() {
     $('board').classList.remove('dial', 'done');
-    cellsAll().forEach((c) => c.classList.remove('hl', 'hot', 'pulse'));
+    cellsAll().forEach((c) => c.classList.remove('hl', 'hot', 'good', 'pulse'));
     Object.values(chips).forEach((c) => c.classList.remove('key'));
     $('paths').innerHTML = '';
   }
@@ -113,7 +113,7 @@ export function mount(host, C, sched) {
     if (k === 4) hl(S.tian.target);
     if (k === 5) hl(S.door.doorTarget);
     if (k === 6) hl(S.god.start);
-    if (k === 7) C.patterns.forEach((pt) => pt.palace && hl(pt.palace, 'hot'));
+    if (k === 7) C.patterns.forEach((pt) => pt.palace && pt.kind !== '平' && hl(pt.palace, pt.kind === '吉' ? 'good' : 'hot'));
   }
 
   // 黄道盘：上南下北、左东右西，春分在东（左），夏至在南（上）
@@ -221,7 +221,7 @@ export function mount(host, C, sched) {
       later(300, () => place(chips.kong, kp[0], 'badge', true));
       later(600, () => kp[1] && place(chips.kong2, kp[1], 'badge', true));
       later(900, () => place(chips.ma, C.summary.maPalace, 'badge2', true));
-      C.patterns.filter((p) => p.palace).forEach((pt, i) => later(1200 + 280 * i, () => hl(pt.palace, 'hot')));
+      C.patterns.filter((p) => p.palace && p.kind !== '平').forEach((pt, i) => later(1200 + 280 * i, () => hl(pt.palace, pt.kind === '吉' ? 'good' : 'hot')));
       later(1500 + 280 * C.patterns.length, done); return;
     }
     if (k === 8) {
@@ -286,7 +286,7 @@ export function explain(C, k) {
       <p>八神之首“值符”跟随值符星落${P(S.god.start)}，然后${S.god.clockwise ? '阳遁顺时针' : '阴遁逆时针'}依次排：${S.god.names.join('、')}。</p>`;
     if (k === 7) html = h(7, '空亡、驿马与格局') + `
       <p>旬空 ${sm.kong.join('、')}，落${sm.kongPalaces.map(P).join('、')}；驿马在${sm.ma}，落${P(sm.maPalace)}。</p>
-      ${C.patterns.length ? `<ul class="pat">${C.patterns.map((pt) => `<li><span class="tag ${pt.kind}">${pt.kind}</span><span><b>${pt.name}</b> ${pt.palace ? P(pt.palace) + '：' : ''}${pt.why}</span></li>`).join('')}</ul>` : '<p>未识别到常见特殊格局。</p>'}`;
+      ${C.patterns.length ? `<ul class="pat">${C.patterns.map((pt) => `<li><span class="tag ${pt.kind}">${pt.kind}</span><span><b>${pt.name}</b> ${pt.palace ? P(pt.palace) + '：' : ''}${pt.why}${pt.says ? `<br><small>依：${pt.says.join('；')}</small>` : ''}${pt.quote ? `<br><small>${esc(pt.quote)}</small>` : ''}</span></li>`).join('')}</ul>` : '<p>未识别到常见特殊格局。</p>'}`;
     if (k === 8) html = h(8, '古籍克应') + keyingHtml(C);
     return html;
   }

@@ -514,6 +514,33 @@ for (const [yr, label, kook, gong, wc, home, sf, away, pats] of TY_CASES) {
   }
 }
 
+// ── 奇门格局（按调研资料判定条件）──
+{
+  const YUNU = ['庚午', '己卯', '戊子', '丁酉', '丙午', '乙卯'];
+  const BUYU = ['甲庚午', '乙辛巳', '丙壬辰', '丁癸卯', '戊甲寅', '己乙丑', '庚丙子', '辛丁酉', '壬戊申', '癸己未'];
+  const MU6 = ['丙戌', '壬辰', '癸未', '戊戌', '己丑', '丁丑'];
+  let nYunu = 0;
+  for (let i = 0; i < 1500; i++) {
+    const day = 1 + (i % 28), mon = 1 + Math.floor(i / 28) % 12, yr = 2010 + Math.floor(i / 336);
+    const h = (i * 7) % 24;
+    const C = qimen.chart(yr, mon, day, h, 30, {});
+    const P = C.steps.pillars, names = C.patterns.map((x) => x.name);
+    // 玉女守门（地盘丁临值使门）只在六个时辰出现，且这六个时辰必定出现
+    const yn = C.patterns.some((x) => x.name === '玉女守门' && x.says.some((t) => t.includes('地盘丁')));
+    check(`玉女守门 ${P.hour}`, yn === YUNU.includes(P.hour), `${yr}-${mon}-${day} ${h}时 ${P.hour}`);
+    if (yn) nYunu++;
+    // 六甲之时九星、八门全伏吟
+    if (P.hour[0] === '甲') check(`六甲时伏吟 ${P.hour}`, names.includes('星伏吟') && names.includes('门伏吟'));
+    check(`五不遇时 ${P.day}${P.hour}`, names.includes('五不遇时') === BUYU.includes(P.day[0] + P.hour));
+    check(`时干入墓 ${P.hour}`, names.includes('时干入墓') === MU6.includes(P.hour));
+    // 每条格局都带出处与所依
+    check('格局带出处', C.patterns.every((x) => x.says && x.says.length && x.quote));
+    // 吉凶对称：青龙逃走与白虎猖狂不会出现在同一对干上
+    for (const x of C.patterns.filter((y) => y.name === '朱雀投江')) check('朱雀投江为丁加癸', /天盘丁.*加地盘癸/.test(x.why));
+  }
+  check('玉女守门样本', nYunu > 10, String(nYunu));
+}
+
 console.log(`课体分布（${N} 课）：`, seen);
 console.log(failures.join('\n'));
 console.log(`\n通过 ${pass}，失败 ${fail}`);

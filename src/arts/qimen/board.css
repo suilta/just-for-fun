@@ -10,6 +10,9 @@
 .qm .board.dial .cell { opacity: .35; }
 .qm .board.done .cell { box-shadow: inset 0 0 0 1px var(--gold); }
 .qm .board.done .cell.hot { box-shadow: inset 0 0 0 2px var(--cinnabar); }
+.qm .cell.good, .qm .board.done .cell.good { box-shadow: inset 0 0 0 2px var(--jade); }
+.qm .cell.good.hot, .qm .board.done .cell.good.hot { box-shadow: inset 0 0 0 2px var(--cinnabar), inset 0 0 0 4px var(--jade); }
+.explain .pat small { color: var(--muted); }
 @media (max-width: 600px) { .qm .board.filled .pname { display: none; } }
 .qm .paths polyline { fill: none; stroke: var(--cinnabar); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: .55; }
 .qm .paths circle { fill: var(--cinnabar); }

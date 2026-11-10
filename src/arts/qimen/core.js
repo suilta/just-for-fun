@@ -39,6 +39,7 @@ const SHENG = { 木: '火', 火: '土', 土: '金', 金: '水', 水: '木' };
 const ZHI_PALACE = { 子: 1, 丑: 8, 寅: 8, 卯: 3, 辰: 4, 巳: 4, 午: 9, 未: 2, 申: 2, 酉: 7, 戌: 6, 亥: 6 };
 
 import { keying, keyingText } from './keying.js';
+import { findPatterns } from './patterns.js';
 
 // ───────────────────────── 排盘选项 ─────────────────────────
 const DEFAULT_OPTS = {
@@ -214,34 +215,6 @@ function chart(y, m, d, h, mi, opts) {
 
   const patterns = [];
   const add = (p, name, kind, why) => { patterns.push({ palace: p, name, kind, why }); if (p) palaces[p].notes.push(name); };
-  if (shift === 0) add(0, '星伏吟', '凶', '九星都在本宫未动');
-  if (shift === 4) add(0, '星反吟', '凶', '九星落在本宫的对冲宫');
-  if (doorShift === 0) add(0, '门伏吟', '凶', '八门都在本宫未动');
-  if (doorShift === 4) add(0, '门反吟', '凶', '八门落在本宫的对冲宫');
-  const XING = { 戊: 3, 己: 2, 庚: 8, 辛: 9, 壬: 4, 癸: 4 };
-  const MU = { 乙: 2, 丙: 6, 丁: 6, 戊: 6, 己: 6, 庚: 8, 辛: 8, 壬: 4, 癸: 4 };
-  for (let p = 1; p <= 9; p++) {
-    if (p === 5) continue;
-    const P_ = palaces[p];
-    for (const s of P_.tianStems) {
-      if (XING[s] === p) add(p, `六仪击刑（${s}）`, '凶', `天盘${s}落${P_.gua}${p}宫，与宫支相刑`);
-      if (MU[s] === p) add(p, `${'乙丙丁'.includes(s) ? '奇' : '仪'}入墓（${s}）`, '凶', `天盘${s}落${P_.gua}${p}宫，为其五行墓库`);
-      if (s === '戊' && P_.di === '丙') add(p, '青龙返首', '吉', '天盘戊加地盘丙');
-      if (s === '丙' && P_.di === '戊') add(p, '飞鸟跌穴', '吉', '天盘丙加地盘戊');
-      if (s === '乙' && P_.di === '辛') add(p, '青龙逃走', '凶', '天盘乙加地盘辛');
-      if (s === '辛' && P_.di === '乙') add(p, '白虎猖狂', '凶', '天盘辛加地盘乙');
-      if (s === '丁' && P_.di === '癸') add(p, '朱雀投江', '凶', '天盘丁加地盘癸');
-      if (s === '癸' && P_.di === '丁') add(p, '螣蛇夭矫', '凶', '天盘癸加地盘丁');
-      if (s === '庚' && P_.di === '丙') add(p, '太白入荧', '凶', '天盘庚加地盘丙');
-      if (s === '丙' && P_.di === '庚') add(p, '荧入太白', '凶', '天盘丙加地盘庚');
-    }
-    if (P_.door) {
-      const dw = DOOR_WX[P_.door];
-      if (KE[dw] === P_.wx) add(p, `门迫（${P_.door}）`, '凶', `${P_.door}属${dw}，克${P_.gua}宫${P_.wx}`);
-      if (KE[P_.wx] === dw) add(p, `门受制（${P_.door}）`, '平', `${P_.gua}宫${P_.wx}克${P_.door}${dw}`);
-    }
-    if (P_.door === DOOR_HOME[p] && doorShift !== 0) add(p, `${P_.door}伏吟`, '平', '此门回到本宫');
-  }
 
   const result = {
     input: { y, m, d, h, mi, text: `${y}-${pad(m)}-${pad(d)} ${pad(h)}:${pad(mi)}` },
@@ -251,6 +224,8 @@ function chart(y, m, d, h, mi, opts) {
       ma: maZhi, maPalace, kong: kongZhi, kongPalaces,
     },
   };
+  // 吉凶格局：按调研资料逐条判定，各说并列
+  for (const pt of findPatterns(result)) { patterns.push(pt); if (pt.palace) palaces[pt.palace].notes.push(pt.name); }
   result.keying = o.keying ? keying(result, o) : null;
   return result;
 }
@@ -282,8 +257,8 @@ function toText(c, question) {
   }
   L.push('');
   if (c.patterns.length) {
-    L.push('格局提示（程序按规则识别，仅供参考）：');
-    for (const pt of c.patterns) L.push(`- ${pt.name}【${pt.kind}】${pt.palace ? PALACE[pt.palace].gua + pt.palace + '宫：' : '全局：'}${pt.why}`);
+    L.push('格局（按古籍判定条件逐条识别，各书说法不同处注明所依；九星、八门之伏吟反吟为全局）：');
+    for (const pt of c.patterns) L.push(`- ${pt.name}【${pt.kind}】${pt.palace ? PALACE[pt.palace].gua + pt.palace + '宫：' : '全局：'}${pt.why}${pt.says ? `（依：${pt.says.join('；')}）` : ''}`);
   } else L.push('格局提示：未识别到常见特殊格局。');
   L.push('');
   if (c.keying) { L.push(keyingText(c.keying)); L.push(''); }
