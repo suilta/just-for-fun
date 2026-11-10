@@ -86,6 +86,10 @@ button.primary:hover:not(:disabled) { color: var(--surface); filter: brightness(
 .opt .note { font-size: 12px; color: var(--muted); margin: 0; }
 .opt .inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .opt .inline input[type=number] { width: 7em; }
+.opt .impact { font-size: 12.5px; margin: 0; padding: 6px 9px; border-radius: 6px; background: var(--cell); border: 1px dashed var(--line); line-height: 1.6; }
+.opt .impact b { font-weight: 700; }
+.opt .impact.same b { color: var(--jade); }
+.opt .impact.diff b { color: var(--cinnabar); }
 .altar .hint { position: relative; font-size: 12.5px; color: var(--muted); margin: 0; }
 
 /* 第二、三幕 */
@@ -211,17 +215,19 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
         <div class="opts">
           <div class="opt">
             <label class="label" for="o-day">换日</label>
-            <select id="o-day">
-              <option value="23">23 点换日（子初换日，默认）</option>
-              <option value="0">0 点换日（子正换日）</option>
+            <select id="o-day" data-fancy>
+              <option value="23" data-desc="晚上 23 点（子时开始）就算第二天，日柱换成次日。">23 点换日（默认）</option>
+              <option value="0" data-desc="到半夜 0 点才换日，23 点到 0 点之间日柱仍算当天。">0 点换日</option>
             </select>
+            <p class="impact" id="i-day" hidden></p>
           </div>
           <div class="opt">
             <label class="label" for="o-dn">昼夜贵人分界</label>
-            <select id="o-dn">
-              <option value="maoshen">卯至申为昼，酉至寅为夜（默认）</option>
-              <option value="sun">按当地日出日落</option>
+            <select id="o-dn" data-fancy>
+              <option value="maoshen" data-desc="占时在卯、辰、巳、午、未、申时用昼贵人，酉时到寅时用夜贵人。">卯至申为昼（默认）</option>
+              <option value="sun" data-desc="按当地经纬度算出当天的日出日落，太阳在地平线上用昼贵人，否则用夜贵人。冬夏昼长不同，清晨和傍晚可能与上一项结果不同。">按当地日出日落</option>
             </select>
+            <p class="impact" id="i-dn" hidden></p>
             <div class="inline" id="o-geo"><label class="note" for="o-lat">北纬</label><input type="number" id="o-lat" min="0" max="60" step="0.01" value="39.9"><label class="note" for="o-lon">东经</label><input type="number" id="o-lon" min="70" max="140" step="0.01" value="116.4"></div>
             <p class="note">取传口径固定为：伏吟/返吟 → 贼克 → 比用 → 涉害（《六壬大全》数深浅）→ 八专 → 遥克 → 别责 → 昴星。</p>
           </div>
@@ -1007,8 +1013,135 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
 
 </script>
 <script>
+/*
+ * 带说明的下拉选择：每个选项上面是名字，下面是解释。
+ * 用法：<select data-fancy> 里的 <option> 写名字，data-desc 写解释；
+ *       页面加载后调用 FancySelect.enhanceAll()。原生 select 保留为数据源，
+ *       选中后会触发它的 change 事件；用代码改了 select.value 后调用 FancySelect.refreshAll()。
+ * 颜色取页面已有的 --cell --line --ink --muted --accent --hl --surface。
+ */
+(function (root) {
+  'use strict';
+  const CSS = `
+.fs { position: relative; }
+.fs-native { position: absolute !important; width: 1px !important; height: 1px !important; opacity: 0 !important; pointer-events: none !important; overflow: hidden; }
+.fs-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; font: inherit;
+  color: var(--ink); background: var(--cell); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; cursor: pointer; }
+.fs-btn:hover { border-color: var(--accent); }
+.fs-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fs-btn .fs-cur { min-width: 0; }
+.fs-btn .fs-chev { flex: none; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg) translateY(-2px); transition: transform .2s; }
+.fs.open .fs-chev { transform: rotate(-135deg) translateY(-2px); }
+.fs-list { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20; margin: 0; padding: 4px; list-style: none;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .14); max-height: 60vh; overflow: auto; }
+.fs-opt { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 2px 8px; padding: 8px 10px; border-radius: 6px; cursor: pointer; outline: none; }
+.fs-opt + .fs-opt { margin-top: 2px; }
+.fs-opt:hover, .fs-opt.active { background: var(--hl); }
+.fs-opt .fs-dot { grid-row: 1 / 3; align-self: start; margin-top: 4px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line); }
+.fs-opt[aria-selected="true"] .fs-dot { border-color: var(--accent); background: radial-gradient(var(--accent) 45%, transparent 50%); }
+.fs-opt .fs-name { font-weight: 700; color: var(--ink); line-height: 1.4; }
+.fs-opt .fs-desc { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+@media (prefers-reduced-motion: reduce) { .fs-btn .fs-chev { transition: none; } }
+`;
+  const instances = [];
+  let styled = false;
+  function addStyle() {
+    if (styled) return; styled = true;
+    const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
+  }
+
+  function enhance(sel) {
+    if (sel._fs) return sel._fs;
+    addStyle();
+    const wrap = document.createElement('div'); wrap.className = 'fs';
+    sel.parentNode.insertBefore(wrap, sel); wrap.appendChild(sel);
+    sel.classList.add('fs-native'); sel.tabIndex = -1; sel.setAttribute('aria-hidden', 'true');
+
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'fs-btn'; btn.id = sel.id + '-fs';
+    btn.setAttribute('aria-haspopup', 'listbox'); btn.setAttribute('aria-expanded', 'false');
+    btn.innerHTML = '<span class="fs-cur"></span><span class="fs-chev" aria-hidden="true"></span>';
+    const list = document.createElement('ul');
+    list.className = 'fs-list'; list.setAttribute('role', 'listbox'); list.id = sel.id + '-fs-list'; list.hidden = true;
+    btn.setAttribute('aria-controls', list.id);
+    wrap.appendChild(btn); wrap.appendChild(list);
+    // 原来指向 select 的 label 改指向按钮
+    document.querySelectorAll(`label[for="${sel.id}"]`).forEach((l) => { l.htmlFor = btn.id; list.setAttribute('aria-labelledby', l.id || (l.id = sel.id + '-lbl')); });
+
+    const opts = [...sel.options].map((o, i) => {
+      const li = document.createElement('li');
+      li.className = 'fs-opt'; li.setAttribute('role', 'option'); li.tabIndex = -1; li.dataset.value = o.value; li.id = `${sel.id}-fs-${i}`;
+      li.innerHTML = '<span class="fs-dot" aria-hidden="true"></span><span class="fs-name"></span><span class="fs-desc"></span>';
+      li.querySelector('.fs-name').textContent = o.textContent;
+      li.querySelector('.fs-desc').textContent = o.dataset.desc || '';
+      li.addEventListener('click', () => choose(o.value));
+      li.addEventListener('mousemove', () => setActive(i));
+      list.appendChild(li); return li;
+    });
+    let active = 0;
+
+    function refresh() {
+      const o = sel.options[sel.selectedIndex];
+      btn.querySelector('.fs-cur').textContent = o ? o.textContent : '';
+      opts.forEach((li) => li.setAttribute('aria-selected', String(li.dataset.value === sel.value)));
+      btn.disabled = sel.disabled;
+    }
+    function setActive(i) {
+      active = (i + opts.length) % opts.length;
+      opts.forEach((li, j) => li.classList.toggle('active', j === active));
+      list.setAttribute('aria-activedescendant', opts[active].id);
+      opts[active].focus({ preventScroll: true });
+      opts[active].scrollIntoView({ block: 'nearest' });
+    }
+    function open() {
+      instances.forEach((x) => x !== api && x.close());
+      list.hidden = false; wrap.classList.add('open'); btn.setAttribute('aria-expanded', 'true');
+      setActive(Math.max(0, sel.selectedIndex));
+    }
+    function close(focusBtn) {
+      if (list.hidden) return;
+      list.hidden = true; wrap.classList.remove('open'); btn.setAttribute('aria-expanded', 'false');
+      if (focusBtn) btn.focus();
+    }
+    function choose(v) {
+      const changed = sel.value !== v;
+      sel.value = v; refresh(); close(true);
+      if (changed) sel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    btn.addEventListener('click', () => (list.hidden ? open() : close(true)));
+    btn.addEventListener('keydown', (e) => {
+      if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) { e.preventDefault(); open(); }
+    });
+    list.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setActive(active + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(active - 1); }
+      else if (e.key === 'Home') { e.preventDefault(); setActive(0); }
+      else if (e.key === 'End') { e.preventDefault(); setActive(opts.length - 1); }
+      else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(opts[active].dataset.value); }
+      else if (e.key === 'Escape') { e.preventDefault(); close(true); }
+      else if (e.key === 'Tab') close(false);
+    });
+    document.addEventListener('pointerdown', (e) => { if (!wrap.contains(e.target)) close(false); });
+    sel.addEventListener('change', refresh);
+
+    const api = { refresh, close, open, sel };
+    sel._fs = api; instances.push(api); refresh();
+    return api;
+  }
+
+  root.FancySelect = {
+    enhance,
+    enhanceAll(scope) { (scope || document).querySelectorAll('select[data-fancy]').forEach(enhance); },
+    refreshAll() { instances.forEach((x) => x.refresh()); },
+  };
+})(typeof self !== 'undefined' ? self : this);
+
+</script>
+<script>
 (function () {
   'use strict';
+  FancySelect.enhanceAll();
   const LR = window.LR, QM = window.QM;
   const $ = (id) => document.getElementById(id);
   const ZHI = LR.ZHI;
@@ -1354,7 +1487,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   }
   function finish() { runToken++; clearTimers(); jump(7); setPhase('result'); showTab('raw'); }
   $('skip').addEventListener('click', finish);
-  $('again').addEventListener('click', () => { runToken++; clearTimers(); setPhase('intro'); $('dt').value = beijingNow(); });
+  $('again').addEventListener('click', () => { runToken++; clearTimers(); setPhase('intro'); $('dt').value = beijingNow(); updateNotes(); });
 
   function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
   $('copy').addEventListener('click', () => {
@@ -1373,7 +1506,24 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     return { dayChange: +$('o-day').value, dayNight: $('o-dn').value, lat: isFinite(lat) ? lat : 39.9, lon: isFinite(lon) ? lon : 116.4 };
   }
   const optSummary = (o) => `${LR.OPT_TEXT.dayChange[o.dayChange]} · ${o.dayNight === 'sun' ? `日出日落（${o.lat}°N ${o.lon}°E）` : '卯申分昼夜'}`;
+  function impact(id, same, html) { const el = $('i-' + id); el.hidden = false; el.className = 'impact ' + (same ? 'same' : 'diff'); el.innerHTML = html; }
+  function updateNotes() {
+    const v = $('dt').value; if (!v) return;
+    const [ds, ts] = v.split('T'); const [y, m, d] = ds.split('-').map(Number); const [hh, mm] = ts.split(':').map(Number);
+    const o = readOpts();
+    try {
+      const a = LR.cast(y, m, d, hh, mm, Object.assign({}, o, { dayChange: 23 })), b = LR.cast(y, m, d, hh, mm, Object.assign({}, o, { dayChange: 0 }));
+      const same = a.steps.pillars.day === b.steps.pillars.day;
+      impact('day', same, same ? '按你填的时间：不在 23 点到 0 点之间，<b>两种换日结果相同。</b>' : `按你填的时间：正好在 23 点后，<b>日柱会不同</b>（23 点换日为 ${a.steps.pillars.day}，0 点换日为 ${b.steps.pillars.day}），四课三传都可能不同。`);
+      const c1 = LR.cast(y, m, d, hh, mm, Object.assign({}, o, { dayNight: 'maoshen' })), c2 = LR.cast(y, m, d, hh, mm, Object.assign({}, o, { dayNight: 'sun' }));
+      const s2 = c1.steps.gen.isDay === c2.steps.gen.isDay;
+      const sun = c2.steps.gen.sun, hm = (x) => `${String(Math.floor(x)).padStart(2, '0')}:${String(Math.round((x % 1) * 60) % 60).padStart(2, '0')}`;
+      impact('dn', s2, `按你填的时间：卯申分界为${c1.steps.gen.isDay ? '昼' : '夜'}；北纬 ${o.lat}°、东经 ${o.lon}° 当天日出 ${hm(sun.rise)}、日落 ${hm(sun.set)}（真太阳时），为${c2.steps.gen.isDay ? '昼' : '夜'}。` + (s2 ? '<b>两种分法结果相同。</b>' : '<b>两种分法结果不同，贵人和十二天将会变。</b>'));
+    } catch (e) { /* 时间不完整时不显示 */ }
+  }
   function syncOpts() {
+    if (window.FancySelect) FancySelect.refreshAll();
+    updateNotes();
     const o = readOpts();
     $('optSum').textContent = optSummary(o);
     $('o-geo').hidden = o.dayNight !== 'sun';
@@ -1387,6 +1537,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     syncOpts();
   })();
   for (const id of ['o-day', 'o-dn', 'o-lat', 'o-lon']) $(id).addEventListener('change', syncOpts);
+  $('dt').addEventListener('input', updateNotes); $('dt').addEventListener('change', updateNotes);
 
   $('form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -1400,6 +1551,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     ritual();
   });
   $('dt').value = beijingNow();
+  updateNotes();
 })();
 </script>
 </body>
