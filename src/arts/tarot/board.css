@@ -1,0 +1,45 @@
+/* 塔罗牌桌：深色绒布台面，牌背靛蓝与金线；正面米白，按花色着色 */
+.tarot { --felt: #23303b; --felt2: #1a242d; --back: #23305c; --back-line: #c9a54a; --paper: #fbf7ee; --paper-ink: #2a2622;
+  --c-major: #8a6514; --c-wands: #b4532a; --c-cups: #2c6a8a; --c-swords: #4d5a6b; --c-pentacles: #5b7a2c; }
+.tarot .board { border-radius: 14px; overflow: hidden; }
+.tarot .felt { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 40%, var(--felt), var(--felt2) 75%); }
+.tarot .deck { position: absolute; inset: 0; perspective: 1200px; }
+.tarot .tc { position: absolute; aspect-ratio: 3 / 5; transform-origin: 50% 50%; cursor: default; outline: none;
+  transition: left var(--mv, .45s) var(--ease, ease-in-out), top var(--mv, .45s) var(--ease, ease-in-out), width var(--mv, .45s) ease, transform var(--mv, .45s) var(--ease, ease-in-out), opacity .4s; }
+.tarot .tc.gone { opacity: 0; pointer-events: none; }
+.tarot .inner { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .7s cubic-bezier(.3, .7, .3, 1); }
+.tarot .tc.up .inner { transform: rotateY(180deg); }
+.tarot .face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 6%; box-shadow: 0 2px 6px rgba(0, 0, 0, .35); }
+.tarot .front { transform: rotateY(180deg); }
+.tarot .front.rev .art { transform: rotate(180deg); }
+.tarot .art { display: block; width: 100%; height: 100%; }
+.tarot .back .frame { fill: var(--back); stroke: var(--back-line); stroke-width: 1.2; }
+.tarot .back .frame2 { fill: none; stroke: var(--back-line); stroke-width: .6; opacity: .7; }
+.tarot .back .ring { fill: none; stroke: var(--back-line); stroke-width: .8; }
+.tarot .back .st { fill: var(--back-line); opacity: .85; }
+.tarot .back .dot { fill: var(--back); }
+.tarot .back .ln { stroke: var(--back-line); stroke-width: .8; }
+.tarot .front .frame { fill: var(--paper); stroke: #b9ab8c; stroke-width: 1; }
+.tarot .front .frame2 { fill: none; stroke: currentColor; stroke-width: .6; opacity: .45; }
+.tarot .front .art { color: var(--c-major); }
+.tarot .front .art.wands { color: var(--c-wands); } .tarot .front .art.cups { color: var(--c-cups); }
+.tarot .front .art.swords { color: var(--c-swords); } .tarot .front .art.pentacles { color: var(--c-pentacles); }
+.tarot .front .top { font-family: var(--f-display); font-size: 8px; font-weight: 700; fill: currentColor; }
+.tarot .front .nm { font-family: var(--f-display); font-size: 7.5px; font-weight: 700; fill: var(--paper-ink); }
+
+.tarot .board.picking .tc:not(.picked):not(.gone) { cursor: pointer; }
+.tarot .board.picking .tc:not(.picked):hover, .tarot .board.picking .tc:focus-visible { filter: brightness(1.25); }
+.tarot .board.picking .tc:focus-visible .face { box-shadow: 0 0 0 2px var(--back-line); }
+.tarot .tc.picked .face { box-shadow: 0 0 0 2px var(--back-line), 0 6px 14px rgba(0, 0, 0, .45); }
+.tarot .count { position: absolute; left: 50%; top: 10%; transform: translateX(-50%); z-index: 400; padding: 4px 14px; border-radius: 999px;
+  background: rgba(0, 0, 0, .35); color: #f3e7c6; font-size: 14px; letter-spacing: .1em; transition: opacity .3s; pointer-events: none; }
+.tarot .count.off, .tarot .lbl.off { opacity: 0; }
+.tarot .lbl { position: absolute; transform: translateX(-50%); z-index: 350; text-align: center; color: #f3e7c6; font-size: clamp(10px, 1.8vw, 13px);
+  line-height: 1.35; white-space: nowrap; transition: opacity .4s; pointer-events: none; }
+.tarot .lbl b { display: inline-block; min-width: 1.5em; border-radius: 999px; background: rgba(201, 165, 74, .85); color: #1a242d; font-size: .85em; }
+.tarot .lbl .cn { display: block; font-family: var(--f-display); font-weight: 700; }
+.tarot.sp-celtic .lbl { font-size: clamp(8px, 1.4vw, 11px); }
+.tarot.sp-celtic .lbl .cn, .tarot.sp-celtic .lbl .pn { display: none; }
+.tarot.sp-celtic .lbl { transform: translate(-50%, -50%); z-index: 500; }
+.tarot .board.done { box-shadow: 0 0 0 2px var(--back-line); }
+@media (prefers-reduced-motion: reduce) { .tarot .tc, .tarot .inner { transition: none !important; } }

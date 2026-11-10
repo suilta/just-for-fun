@@ -73,12 +73,17 @@ export default function Shell(props) {
     await sched.wait(1800); if (my !== runToken) return;
     finish();
   }
-  function finish() { runToken++; sched.clear(); jump(art.stages.length - 1); setSealOn(false); setPhase('result'); setTab('raw'); }
+  function finish() {
+    runToken++; sched.clear(); jump(art.stages.length - 1); setSealOn(false);
+    // 有交互的步骤（如塔罗抽牌）会在过程中改变结果，结束时重新生成文字
+    setOut(art.text(C, q)); setFoot(art.footer(C));
+    setPhase('result'); setTab('raw');
+  }
   function again() { runToken++; sched.clear(); setPhase('intro'); setDt(beijingNow()); window.scrollTo({ top: 0 }); }
 
   function onSubmit(e) {
     e.preventDefault();
-    const a = parseDt(dt()); if (!a) return;
+    const a = parseDt(art.noTime ? beijingNow() : dt()); if (!a) return;
     q = question().trim();
     C = art.cast(a, { ...opts }, { ...extras });
     setOut(art.text(C, q));
@@ -116,9 +121,9 @@ export default function Shell(props) {
           <h1>{art.name}</h1>
           <div class="sub">{art.sub(opts)}</div>
           <form onSubmit={onSubmit}>
-            <div class="field">
+            <div class="field" hidden={!!art.noTime}>
               <label class="label" for="dt">{art.timeLabel}</label>
-              <input id="dt" type="datetime-local" required value={dt()} onInput={(e) => setDt(e.currentTarget.value)} />
+              <input id="dt" type="datetime-local" required={!art.noTime} value={dt()} onInput={(e) => setDt(e.currentTarget.value)} />
             </div>
             <div class="field">
               <label class="label" for="q">所问之事</label>

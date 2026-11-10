@@ -53,3 +53,19 @@
   --bg: #15120e; --surface: #1d1914; --cell: #231e18; --ink: #ece5da; --muted: #a59a8b; --line: #3a3229;
   --accent: #d6a865; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(214, 168, 101, .14);
 }
+
+/* 塔罗：靛夜 */
+:root[data-art="tarot"] {
+  --bg: #e9e9ef; --surface: #f7f7fa; --cell: #fcfcfd; --ink: #1c1e2a; --muted: #62647a; --line: #cdcfdc;
+  --accent: #3b4a8a; --gold: #9a6f12; --cinnabar: #b0362a; --jade: #2f7a5c; --hl: rgba(59, 74, 138, .12);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-art="tarot"]:not([data-theme="light"]) {
+    --bg: #11121a; --surface: #181a24; --cell: #1d202b; --ink: #e6e7f0; --muted: #9a9cb2; --line: #2f3242;
+    --accent: #a3b1ea; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(163, 177, 234, .15);
+  }
+}
+:root[data-art="tarot"][data-theme="dark"] {
+  --bg: #11121a; --surface: #181a24; --cell: #1d202b; --ink: #e6e7f0; --muted: #9a9cb2; --line: #2f3242;
+  --accent: #a3b1ea; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(163, 177, 234, .15);
+}

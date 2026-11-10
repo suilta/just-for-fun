@@ -8,6 +8,8 @@ import * as qimen from '../src/arts/qimen/core.js';
 import * as LR from '../src/arts/liuren/core.js';
 import * as TY from '../src/arts/taiyi/core.js';
 import * as BZ from '../src/arts/bazi/core.js';
+import * as TR from '../src/arts/tarot/core.js';
+import { DECK } from '../src/arts/tarot/cards.js';
 const QM = { ...astro, ...cal, ...qimen };
 
 let pass = 0, fail = 0;
@@ -248,6 +250,29 @@ for (const [yr, label, kook, gong, wc, home, sf, away, pats] of TY_CASES) {
   // 十神与长生全表抽查
   check('十神全表', '甲乙丙丁戊己庚辛壬癸'.split('').map((g, i) => BZ.shishen(0, i)).join('') === '比肩劫财食神伤官偏财正财七杀正官偏印正印');
   check('长生阳顺阴逆', BZ.changsheng(0, 11) === '长生' && BZ.changsheng(0, 3) === '帝旺' && BZ.changsheng(1, 6) === '长生' && BZ.changsheng(1, 2) === '帝旺');
+}
+
+// ── 塔罗 ──
+{
+  check('塔罗 78 张', DECK.length === 78 && new Set(DECK.map((c) => c.name)).size === 78 && DECK.filter((c) => c.arcana === 'major').length === 22);
+  check('塔罗牌序', DECK[8].name === '力量' && DECK[11].name === '正义' && DECK[22].name === '权杖王牌' && DECK[77].name === '星币国王');
+  check('塔罗关键词齐全', DECK.every((c) => c.up && c.rev));
+  check('牌阵张数', TR.SPREADS.one.positions.length === 1 && TR.SPREADS.three.positions.length === 3 && TR.SPREADS.celtic.positions.length === 10);
+  const c = TR.cast(2026, 11, 10, 12, 0, { spread: 'celtic' });
+  check('洗牌为完整排列', c.deck.length === 78 && new Set(c.deck.map((d) => d.card.id)).size === 78);
+  check('原文不替用户抽牌', TR.toText(c, '') === '（抽牌尚未完成）' && c.picks.length === 0);
+  TR.pick(c, 5); TR.pick(c, 5); TR.pick(c, 70);
+  check('抽牌不重复', c.picks.length === 2);
+  TR.autoPick(c);
+  check('补齐到牌阵张数且标记', c.picks.length === 10 && new Set(c.picks).size === 10 && c.autoFilled);
+  check('原文列出十张', TR.toText(c, '').split('\n').filter((l) => /^\d+\. .+｜关键词：/.test(l)).length === 10);
+  const noRev = TR.cast(2026, 11, 10, 12, 0, { spread: 'three', reversed: false });
+  check('关闭逆位', noRev.deck.every((d) => !d.reversed));
+  // 均匀性：愚人落在各位置的次数，卡方检验（自由度 77，取 0.1% 临界值约 122）
+  const T = 78 * 300, cnt = new Array(78).fill(0);
+  for (let i = 0; i < T; i++) { const order = TR.shuffle(DECK.map((x) => x.id)); cnt[order.indexOf(0)]++; }
+  const e = T / 78, chi = cnt.reduce((a, o) => a + (o - e) ** 2 / e, 0);
+  check('洗牌均匀', chi < 122, 'chi2=' + chi.toFixed(1));
 }
 
 console.log(`课体分布（${N} 课）：`, seen);

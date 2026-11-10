@@ -31,6 +31,15 @@ const MINGLI = [
   },
 ];
 
+const WEST = [
+  {
+    id: 'tarot', name: '塔罗', verb: '抽牌', tone: 'tr',
+    good: '看一件事的状态与可能：洗牌、切牌后亲手从七十八张牌中抽出，按牌阵翻开。',
+    asks: ['这段关系接下来会怎样', '我现在卡在哪里', '这个决定需要留意什么'],
+    how: '单张、三张、凯尔特十字三种牌阵，可含逆位；牌面为本站自绘。',
+  },
+];
+
 export default function Home() {
   onMount(() => { document.title = '三式排盘'; });
   return (
@@ -57,6 +66,21 @@ export default function Home() {
       </section>
       <section class="cards" aria-label="命理">
         <For each={MINGLI}>{(c) => (
+          <a class={'card ' + c.tone} href={'#' + c.id}>
+            <span class="name">{c.name}</span>
+            <span class="good">{c.good}</span>
+            <span class="asks">适合问：{c.asks.join('；')}</span>
+            <span class="how">{c.how}</span>
+            <span class="card-go">去{c.verb} ›</span>
+          </a>
+        )}</For>
+      </section>
+      <section class="group">
+        <h2>塔罗</h2>
+        <p>不按时间起盘，而是在心里想着问题，亲手抽牌。</p>
+      </section>
+      <section class="cards" aria-label="塔罗">
+        <For each={WEST}>{(c) => (
           <a class={'card ' + c.tone} href={'#' + c.id}>
             <span class="name">{c.name}</span>
             <span class="good">{c.good}</span>
