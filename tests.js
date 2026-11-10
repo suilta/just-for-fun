@@ -147,6 +147,24 @@ for (let i = 0; i < N; i++) {
     check('昴星', /昴星/.test(method) && [c1, c2, c3].join() === exp.join(), tag);
   }
 }
+// ── 外部对照用例：与成熟排盘软件逐项核对过的真实课例 ──
+// 2002-05-31 04:00，己亥日寅时，月将申。元亨利贞网六壬排盘与另一款六壬软件结果一致。
+(function () {
+  const c = LR.cast(2002, 5, 31, 4, 0);
+  const S = c.steps;
+  const p = S.pillars;
+  check('对照1 四柱', [p.year, p.month, p.day, p.hour].join(' ') === '壬午 乙巳 己亥 丙寅');
+  check('对照1 月将', Z[p.jiang] === '申');
+  check('对照1 返吟', S.plate.fanyin && /返吟/.test(S.chuan.method));
+  check('对照1 四课', c.ke4.map((k) => k.down + k.upCh).join(' ') === '己丑 丑未 亥巳 巳亥');
+  check('对照1 四课天将', c.ke4.map((k) => k.general).join(' ') === '青龙 天后 玄武 六合');
+  check('对照1 三传', c.chuan.map((t) => t.dun + t.zhi + t.general + t.qin + (t.kong ? '空' : '')).join(' ') === '巳玄武父母空 己亥六合妻财 巳玄武父母空', c.chuan.map((t) => t.dun + t.zhi + t.general + t.qin).join(' '));
+  check('对照1 贵人', Z[S.gen.gui] === '申' && Z[S.gen.guiSeat] === '寅' && S.gen.shun && !S.gen.isDay);
+  const plate = c.plate.map((x) => x.di + x.tian + x.general).join(' ');
+  check('对照1 天地盘', plate === '子午太阴 丑未天后 寅申贵人 卯酉腾蛇 辰戌朱雀 巳亥六合 午子勾陈 未丑青龙 申寅天空 酉卯白虎 戌辰太常 亥巳玄武', plate);
+  check('对照1 旬空', S.extra.kong.map((z) => Z[z]).join('') === '辰巳');
+})();
+
 // 别责阴日例：酉取丑、丑取巳、未取亥
 check('三合次序', [9, 1, 7].map((z) => Z[mod(z + 4, 12)]).join('') === '丑巳亥');
 
