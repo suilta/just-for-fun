@@ -129,7 +129,7 @@ export default function Shell(props) {
               <label class="label" for="q">所问之事</label>
               <textarea id="q" rows="2" placeholder={art.placeholder} value={question()} onInput={(e) => setQuestion(e.currentTarget.value)} />
             </div>
-            <Show when={art.extras}>
+            <Show when={art.extras && (!art.extras.showIf || art.extras.showIf(opts))}>
               <div class="field">
                 <span class="label">{art.extras.label}</span>
                 <div class="pair">

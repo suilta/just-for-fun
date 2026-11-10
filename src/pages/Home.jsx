@@ -31,6 +31,15 @@ const MINGLI = [
   },
 ];
 
+const YI = [
+  {
+    id: 'meihua', name: '梅花易数', verb: '起卦', tone: 'mh',
+    good: '心动即占：用起卦那一刻的农历年月日时，或随口报出的数字起卦，看体用生克。',
+    asks: ['明天的面谈能否顺利', '这笔交易要不要做', '他今天会不会来'],
+    how: '先天八卦数取卦，求互卦、变卦，按动爻分体用，论卦气旺衰。',
+  },
+];
+
 const WEST = [
   {
     id: 'tarot', name: '塔罗', verb: '抽牌', tone: 'tr',
@@ -66,6 +75,21 @@ export default function Home() {
       </section>
       <section class="cards" aria-label="命理">
         <For each={MINGLI}>{(c) => (
+          <a class={'card ' + c.tone} href={'#' + c.id}>
+            <span class="name">{c.name}</span>
+            <span class="good">{c.good}</span>
+            <span class="asks">适合问：{c.asks.join('；')}</span>
+            <span class="how">{c.how}</span>
+            <span class="card-go">去{c.verb} ›</span>
+          </a>
+        )}</For>
+      </section>
+      <section class="group">
+        <h2>易占</h2>
+        <p>以卦象占事，起卦简单，适合临时起念的小事。</p>
+      </section>
+      <section class="cards" aria-label="易占">
+        <For each={YI}>{(c) => (
           <a class={'card ' + c.tone} href={'#' + c.id}>
             <span class="name">{c.name}</span>
             <span class="good">{c.good}</span>

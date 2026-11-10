@@ -10,6 +10,8 @@ import * as TY from '../src/arts/taiyi/core.js';
 import * as BZ from '../src/arts/bazi/core.js';
 import * as TR from '../src/arts/tarot/core.js';
 import { DECK } from '../src/arts/tarot/cards.js';
+import { toLunar } from '../src/core/lunar.js';
+import * as MH from '../src/arts/meihua/core.js';
 const QM = { ...astro, ...cal, ...qimen };
 
 let pass = 0, fail = 0;
@@ -273,6 +275,31 @@ for (const [yr, label, kook, gong, wc, home, sf, away, pats] of TY_CASES) {
   for (let i = 0; i < T; i++) { const order = TR.shuffle(DECK.map((x) => x.id)); cnt[order.indexOf(0)]++; }
   const e = T / 78, chi = cnt.reduce((a, o) => a + (o - e) ** 2 / e, 0);
   check('洗牌均匀', chi < 122, 'chi2=' + chi.toFixed(1));
+}
+
+// ── 农历：近年春节、闰月与 2033 年难例（与官方历书对照）──
+{
+  const L = (y, m, d) => { const r = toLunar(y, m, d); return `${r.yearGz}${r.monthName}${r.dayName}`; };
+  const cases = [[2024, 2, 10, '甲辰正月初一'], [2025, 1, 29, '乙巳正月初一'], [2026, 2, 17, '丙午正月初一'], [2023, 3, 22, '癸卯闰二月初一'],
+    [2025, 7, 25, '乙巳闰六月初一'], [2020, 5, 23, '庚子闰四月初一'], [2017, 7, 23, '丁酉闰六月初一'], [2033, 12, 22, '癸丑闰冬月初一'],
+    [2034, 2, 19, '甲寅正月初一'], [1900, 1, 31, '庚子正月初一'], [1893, 12, 26, '癸巳冬月十九'], [2026, 11, 10, '丙午十月初二']];
+  for (const [y, m, d, want] of cases) check('农历 ' + want, L(y, m, d) === want, `${y}-${m}-${d} 得 ${L(y, m, d)}`);
+}
+// ── 梅花易数：《梅花易数》观梅占——上兑下离泽火革，初爻动，互天风姤，变泽山咸 ──
+{
+  // 原书：辰年(5)十二月(12)十七日(17)申时(9)；上卦 34÷8 余 2 兑，下卦 43÷8 余 3 离，动爻 43÷6 余 1
+  const c = MH.cast(2026, 11, 10, 14, 30, { method: 'three', n1: 34, n2: 43, n3: 2 });
+  check('观梅占本卦', c.ben.name === '泽火革', c.ben.name);
+  check('观梅占动爻', c.moving === 1);
+  check('观梅占互卦', c.hu.name === '天风姤', c.hu.name);
+  check('观梅占变卦', c.bian.name === '泽山咸', c.bian.name);
+  check('观梅占体用', c.steps.tiyong.ti === 2 && c.steps.tiyong.yong === 3 && c.steps.tiyong.rel === '用克体');
+  // 六十四卦齐全且不重复
+  const names = new Set(); for (let u = 1; u <= 8; u++) for (let d = 1; d <= 8; d++) names.add(MH.hexagram(u, d).name);
+  check('六十四卦', names.size === 64);
+  // 时间起卦取数：2026-11-10 14:30 为农历丙午年十月初二未时
+  const t = MH.cast(2026, 11, 10, 14, 30);
+  check('时间起卦取数', t.steps.nums.list.map((x) => x.v).join() === '7,10,2,8' && t.ben.name === '离为火' && t.moving === 3);
 }
 
 console.log(`课体分布（${N} 课）：`, seen);

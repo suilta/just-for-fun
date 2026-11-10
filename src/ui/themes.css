@@ -69,3 +69,19 @@
   --bg: #11121a; --surface: #181a24; --cell: #1d202b; --ink: #e6e7f0; --muted: #9a9cb2; --line: #2f3242;
   --accent: #a3b1ea; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(163, 177, 234, .15);
 }
+
+/* 梅花易数：梅红 */
+:root[data-art="meihua"] {
+  --bg: #efe9ea; --surface: #faf6f6; --cell: #fdfbfb; --ink: #241b1e; --muted: #6c5f63; --line: #d8cbce;
+  --accent: #a0365a; --gold: #9a6f12; --cinnabar: #b0362a; --jade: #2f7a5c; --hl: rgba(160, 54, 90, .1);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-art="meihua"]:not([data-theme="light"]) {
+    --bg: #161013; --surface: #1e171a; --cell: #241c20; --ink: #efe5e8; --muted: #a8979c; --line: #3b2f33;
+    --accent: #e48aa8; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(228, 138, 168, .14);
+  }
+}
+:root[data-art="meihua"][data-theme="dark"] {
+  --bg: #161013; --surface: #1e171a; --cell: #241c20; --ink: #efe5e8; --muted: #a8979c; --line: #3b2f33;
+  --accent: #e48aa8; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(228, 138, 168, .14);
+}

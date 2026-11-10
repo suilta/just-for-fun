@@ -1,0 +1,50 @@
+/* 梅花易数卦盘：上方取数，中央本卦，左右互卦与变卦 */
+.mh .board { aspect-ratio: auto; min-height: 420px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px; padding: 14px 10px; background: var(--cell); border: 1px solid var(--line); border-radius: 12px; }
+.mh .board.done { box-shadow: inset 0 0 0 1px var(--gold); }
+.mh .top { display: grid; gap: 8px; justify-items: center; min-height: 92px; }
+.mh .tiles { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.mh .tile { display: grid; justify-items: center; min-width: 62px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.mh .tile .k { font-size: 11px; color: var(--muted); letter-spacing: .1em; }
+.mh .tile b { font-family: var(--f-mono); font-size: 22px; line-height: 1.2; color: var(--accent); }
+.mh .tile .n { font-size: 11px; color: var(--muted); min-height: 1.3em; }
+.mh .calc { font-size: 14px; color: var(--ink); min-height: 1.6em; text-align: center; }
+.mh .calc b { color: var(--cinnabar); font-family: var(--f-display); }
+.mh .cal { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); display: flex; gap: 16px; align-items: center; padding: 16px 22px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, .08); z-index: 2; transition: opacity .5s, transform .5s; }
+.mh .cal.pend { opacity: 0; transform: translate(-50%, -40%); pointer-events: none; }
+.mh .cal .t { display: grid; gap: 2px; }
+.mh .cal .t span { font-size: 12px; color: var(--muted); }
+.mh .cal .t b { font-family: var(--f-display); font-size: clamp(18px, 3.4vw, 24px); }
+.mh .moon { width: 56px; height: 56px; }
+.mh .moon .dark { fill: var(--line); }
+.mh .moon .lit { fill: var(--gold); }
+
+.mh .main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr); gap: 10px; align-items: center; }
+.mh .hxside, .mh .center { display: grid; justify-items: center; gap: 8px; transition: opacity .45s, transform .45s; }
+.mh .cap { font-size: 12px; color: var(--muted); letter-spacing: .2em; }
+.mh .nm { font-family: var(--f-display); font-weight: 700; font-size: clamp(14px, 2.6vw, 18px); text-align: center; transition: opacity .45s; }
+.mh .center .nm { font-size: clamp(18px, 3.6vw, 26px); color: var(--accent); }
+.mh .benwrap { position: relative; }
+.mh .hex { display: grid; gap: clamp(6px, 1.4vw, 10px); width: clamp(110px, 24vw, 170px); }
+.mh .hex.small { width: clamp(60px, 13vw, 96px); gap: clamp(4px, .9vw, 7px); }
+.mh .ln { display: flex; gap: 14%; height: clamp(10px, 2.2vw, 16px); transition: opacity .4s, transform .4s; }
+.mh .hex.small .ln { height: clamp(6px, 1.3vw, 10px); }
+.mh .ln i { flex: 1; background: var(--ink); border-radius: 2px; transition: background .3s, transform .45s; }
+.mh .ln.yang i:last-child { display: none; }
+.mh .ln.hot i { background: var(--accent); }
+.mh .ln.mv i { background: var(--cinnabar); }
+.mh .ln.mv { position: relative; }
+.mh .ln.mv::after { content: ''; position: absolute; right: -16px; top: 50%; width: 8px; height: 8px; border-radius: 50%; background: var(--cinnabar); transform: translateY(-50%); }
+.mh .hex.small .ln.mv::after { right: -11px; width: 6px; height: 6px; }
+.mh .ln.flip i { animation: flip .6s ease both; }
+@keyframes flip { 0% { transform: scaleY(1); } 50% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
+.mh .pend { opacity: 0; transform: translateY(6px); }
+.mh .tag { position: absolute; left: -34px; font-family: var(--f-display); font-weight: 900; font-size: 16px; color: var(--surface); background: var(--accent);
+  border-radius: 4px; padding: 0 5px; transition: opacity .4s, transform .4s; }
+.mh .tag.up { top: 12%; } .mh .tag.low { bottom: 12%; }
+.mh .tri { position: absolute; right: -50px; font-family: var(--f-display); font-size: 13px; color: var(--muted); white-space: nowrap; transition: opacity .4s, transform .4s; }
+.mh .tri.up { top: 12%; } .mh .tri.low { bottom: 12%; }
+.mh .rel { justify-self: center; text-align: center; font-size: 14px; padding: 6px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); transition: opacity .45s, transform .45s; }
+.mh .rel b { color: var(--cinnabar); font-family: var(--f-display); font-size: 16px; }
+@media (max-width: 520px) { .mh .tri { display: none; } .mh .tag { left: -28px; font-size: 14px; } .mh .tile { min-width: 52px; } }
+@media (prefers-reduced-motion: reduce) { .mh * { transition: none !important; animation: none !important; } }
