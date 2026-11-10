@@ -48,7 +48,7 @@
   }
 
   // 排盘选项：默认口径锁定为 23 点换日、卯至申为昼
-  const DEFAULT_OPTS = { dayChange: 23, dayNight: 'maoshen', lat: 39.9, lon: 116.4 };
+  const DEFAULT_OPTS = { dayChange: 23, dayNight: 'maoshen', solar: false, lat: 39.9, lon: 116.4 };
   const OPT_TEXT = {
     dayChange: { 23: '23 点换日', 0: '0 点换日' },
     dayNight: { maoshen: '卯至申为昼', sun: '按当地日出日落分昼夜' },
@@ -65,7 +65,7 @@
 
   function cast(y, m, d, h, mi, opts) {
     const o = Object.assign({}, DEFAULT_OPTS, opts || {});
-    const P = QM.fourPillars(y, m, d, h, mi, { dayChange: o.dayChange });
+    const P = QM.fourPillars(y, m, d, h, mi, { dayChange: o.dayChange, solar: o.solar, lon: o.lon });
     const steps = {};
     const dayGan = P.dayIdx % 10, dayZhi = P.dayIdx % 12, hourZhi = P.hourIdx % 12;
     const yangDay = dayGan % 2 === 0;
@@ -78,7 +78,7 @@
     const zhongqi = ['雨水', '春分', '谷雨', '小满', '夏至', '大暑', '处暑', '秋分', '霜降', '小雪', '冬至', '大寒'][k];
     steps.pillars = {
       year: QM.ganzhi(P.yearIdx), month: QM.ganzhi(P.monthIdx), day: QM.ganzhi(P.dayIdx), hour: QM.ganzhi(P.hourIdx),
-      sunLon: lon, dayShift: P.dayShift,
+      sunLon: lon, dayShift: P.dayShift, clock: QM.fmtDT(P.clock), eot: P.eot,
       jiang, jiangName: JIANG_NAME[jiang], zhongqi, hourZhi,
     };
 
@@ -228,9 +228,10 @@
   function toText(c, question) {
     const S = c.steps, L = [];
     const o = c.opts;
-    L.push(`【大六壬课式】月将加占时 · 九宗门取三传 · ${OPT_TEXT.dayChange[o.dayChange]} · ${OPT_TEXT.dayNight[o.dayNight]}`);
+    L.push(`【大六壬课式】月将加占时 · 九宗门取三传 · ${OPT_TEXT.dayChange[o.dayChange]} · ${OPT_TEXT.dayNight[o.dayNight]} · ${o.solar ? '真太阳时' : '北京时间'}`);
     L.push('取传口径：伏吟/返吟 → 贼克 → 比用 → 涉害（《六壬大全》数深浅，起点与本家不计；等深取临孟、临仲，再平阳日干上、阴日支上）→ 八专 → 遥克 → 别责 → 昴星');
-    L.push(`占时：${c.input.text}（北京时间，未做真太阳时校正）`);
+    if (o.solar) L.push(`占时：${c.input.text}（北京时间）；真太阳时 ${S.pillars.clock}（东经 ${o.lon}°，经度差 ${((o.lon - 120) * 4).toFixed(1)} 分，均时差 ${S.pillars.eot.toFixed(1)} 分），日柱与占时按真太阳时`);
+    else L.push(`占时：${c.input.text}（北京时间，未做真太阳时校正）`);
     L.push(`四柱：${S.pillars.year}年 ${S.pillars.month}月 ${S.pillars.day}日 ${S.pillars.hour}时`);
     L.push(`月将：${ZHI[S.pillars.jiang]}（${S.pillars.jiangName}，${S.pillars.zhongqi}后），占时：${ZHI[S.pillars.hourZhi]}`);
     L.push(`旬：${S.extra.xun}旬，旬空：${S.extra.kong.map((z) => ZHI[z]).join('')}；日马：${ZHI[S.extra.dayMa]}`);

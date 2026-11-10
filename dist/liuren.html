@@ -86,6 +86,9 @@ button.primary:hover:not(:disabled) { color: var(--surface); filter: brightness(
 .opt .note { font-size: 12px; color: var(--muted); margin: 0; }
 .opt .inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .opt .inline input[type=number] { width: 7em; }
+.opt label.chk { display: flex; gap: 6px; align-items: center; font-size: 14px; }
+.opt label.chk input { width: auto; margin: 0; }
+.opt .what { font-size: 12.5px; color: var(--ink); margin: 0; line-height: 1.65; }
 .opt .impact { font-size: 12.5px; margin: 0; padding: 6px 9px; border-radius: 6px; background: var(--cell); border: 1px dashed var(--line); line-height: 1.6; }
 .opt .impact b { font-weight: 700; }
 .opt .impact.same b { color: var(--jade); }
@@ -228,7 +231,19 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
               <option value="sun" data-desc="按当地经纬度算出当天的日出日落，太阳在地平线上用昼贵人，否则用夜贵人。冬夏昼长不同，清晨和傍晚可能与上一项结果不同。">按当地日出日落</option>
             </select>
             <p class="impact" id="i-dn" hidden></p>
-            <div class="inline" id="o-geo"><label class="note" for="o-lat">北纬</label><input type="number" id="o-lat" min="0" max="60" step="0.01" value="39.9"><label class="note" for="o-lon">东经</label><input type="number" id="o-lon" min="70" max="140" step="0.01" value="116.4"></div>
+          </div>
+          <div class="opt">
+            <span class="label">真太阳时</span>
+            <label class="chk" for="o-solar"><input type="checkbox" id="o-solar"> 用真太阳时定日柱和占时</label>
+            <p class="what">钟表上的北京时间是按东经 120° 定的。真太阳时按当地经度和当天太阳位置校正，西部地区常差一小时左右，可能换一个时辰，占时一变，天盘、四课、三传都会变。月将始终按真实时刻换将，不受此项影响。</p>
+            <p class="impact" id="i-solar" hidden></p>
+          </div>
+          <div class="opt" id="o-geo">
+            <span class="label">当地位置（用于真太阳时和日出日落）</span>
+            <div class="inline"><label class="note" for="o-lat">北纬</label><input type="number" id="o-lat" min="0" max="60" step="0.01" value="39.9"><label class="note" for="o-lon">东经</label><input type="number" id="o-lon" min="70" max="140" step="0.01" value="116.4"></div>
+            <p class="note">例如北京 39.90°N 116.40°E、上海 31.23°N 121.47°E、成都 30.57°N 104.07°E、广州 23.13°N 113.26°E。</p>
+          </div>
+          <div class="opt">
             <p class="note">取传口径固定为：伏吟/返吟 → 贼克 → 比用 → 涉害（《六壬大全》数深浅）→ 八专 → 遥克 → 别责 → 昴星。</p>
           </div>
         </div>
@@ -799,7 +814,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   }
 
   // 排盘选项：默认口径锁定为 23 点换日、卯至申为昼
-  const DEFAULT_OPTS = { dayChange: 23, dayNight: 'maoshen', lat: 39.9, lon: 116.4 };
+  const DEFAULT_OPTS = { dayChange: 23, dayNight: 'maoshen', solar: false, lat: 39.9, lon: 116.4 };
   const OPT_TEXT = {
     dayChange: { 23: '23 点换日', 0: '0 点换日' },
     dayNight: { maoshen: '卯至申为昼', sun: '按当地日出日落分昼夜' },
@@ -816,7 +831,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
 
   function cast(y, m, d, h, mi, opts) {
     const o = Object.assign({}, DEFAULT_OPTS, opts || {});
-    const P = QM.fourPillars(y, m, d, h, mi, { dayChange: o.dayChange });
+    const P = QM.fourPillars(y, m, d, h, mi, { dayChange: o.dayChange, solar: o.solar, lon: o.lon });
     const steps = {};
     const dayGan = P.dayIdx % 10, dayZhi = P.dayIdx % 12, hourZhi = P.hourIdx % 12;
     const yangDay = dayGan % 2 === 0;
@@ -829,7 +844,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     const zhongqi = ['雨水', '春分', '谷雨', '小满', '夏至', '大暑', '处暑', '秋分', '霜降', '小雪', '冬至', '大寒'][k];
     steps.pillars = {
       year: QM.ganzhi(P.yearIdx), month: QM.ganzhi(P.monthIdx), day: QM.ganzhi(P.dayIdx), hour: QM.ganzhi(P.hourIdx),
-      sunLon: lon, dayShift: P.dayShift,
+      sunLon: lon, dayShift: P.dayShift, clock: QM.fmtDT(P.clock), eot: P.eot,
       jiang, jiangName: JIANG_NAME[jiang], zhongqi, hourZhi,
     };
 
@@ -979,9 +994,10 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   function toText(c, question) {
     const S = c.steps, L = [];
     const o = c.opts;
-    L.push(`【大六壬课式】月将加占时 · 九宗门取三传 · ${OPT_TEXT.dayChange[o.dayChange]} · ${OPT_TEXT.dayNight[o.dayNight]}`);
+    L.push(`【大六壬课式】月将加占时 · 九宗门取三传 · ${OPT_TEXT.dayChange[o.dayChange]} · ${OPT_TEXT.dayNight[o.dayNight]} · ${o.solar ? '真太阳时' : '北京时间'}`);
     L.push('取传口径：伏吟/返吟 → 贼克 → 比用 → 涉害（《六壬大全》数深浅，起点与本家不计；等深取临孟、临仲，再平阳日干上、阴日支上）→ 八专 → 遥克 → 别责 → 昴星');
-    L.push(`占时：${c.input.text}（北京时间，未做真太阳时校正）`);
+    if (o.solar) L.push(`占时：${c.input.text}（北京时间）；真太阳时 ${S.pillars.clock}（东经 ${o.lon}°，经度差 ${((o.lon - 120) * 4).toFixed(1)} 分，均时差 ${S.pillars.eot.toFixed(1)} 分），日柱与占时按真太阳时`);
+    else L.push(`占时：${c.input.text}（北京时间，未做真太阳时校正）`);
     L.push(`四柱：${S.pillars.year}年 ${S.pillars.month}月 ${S.pillars.day}日 ${S.pillars.hour}时`);
     L.push(`月将：${ZHI[S.pillars.jiang]}（${S.pillars.jiangName}，${S.pillars.zhongqi}后），占时：${ZHI[S.pillars.hourZhi]}`);
     L.push(`旬：${S.extra.xun}旬，旬空：${S.extra.kong.map((z) => ZHI[z]).join('')}；日马：${ZHI[S.extra.dayMa]}`);
@@ -1418,7 +1434,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   function explain(k) {
     const P = S(); const h = (no, t) => `<h2><span class="no">${no + 1}/8</span>${t}</h2>`;
     let x = '';
-    if (k === 0) x = h(0, '四柱与月将') + `<p>四柱 <b>${P.pillars.year} ${P.pillars.month} ${P.pillars.day} ${P.pillars.hour}</b>。太阳视黄经 ${P.pillars.sunLon.toFixed(2)}°，已过${P.pillars.zhongqi}，月将为<b>${zn(P.pillars.jiang)}（${P.pillars.jiangName}）</b>。</p><p class="rule">月将即太阳所在的宫次，以中气换将：雨水后亥、春分后戌……冬至后丑、大寒后子。</p>`;
+    if (k === 0) x = h(0, '四柱与月将') + `<p>四柱 <b>${P.pillars.year} ${P.pillars.month} ${P.pillars.day} ${P.pillars.hour}</b>。太阳视黄经 ${P.pillars.sunLon.toFixed(2)}°，已过${P.pillars.zhongqi}，月将为<b>${zn(P.pillars.jiang)}（${P.pillars.jiangName}）</b>。</p>${C.opts.solar ? `<p>真太阳时 ${P.pillars.clock}（东经 ${C.opts.lon}°），日柱和占时按真太阳时取。</p>` : ''}<p class="rule">月将即太阳所在的宫次，以中气换将：雨水后亥、春分后戌……冬至后丑、大寒后子。</p>`;
     if (k === 1) x = h(1, '地盘') + '<p>地盘十二支固定不动：上南下北，巳午未申在上，亥子丑寅在下。</p>';
     if (k === 2) x = h(2, '天盘') + `<p>以月将${zn(P.pillars.jiang)}加在占时${zn(P.pillars.hourZhi)}上，十二支随之顺时针转动 ${P.plate.rot} 格，形成天盘。</p>${P.plate.fuyin ? '<p><b>月将与占时相同，天地盘重合，是伏吟课。</b></p>' : P.plate.fanyin ? '<p><b>天盘与地盘处处对冲，是返吟课。</b></p>' : ''}`;
     if (k === 3) x = h(3, '四课') + `<ul>${C.ke4.map((c) => `<li>第${'一二三四'[c.no - 1]}课：${c.no === 1 ? `日干${c.down}寄${zn(P.ke.jigong)}，` : c.no === 3 ? `日支${c.down}，` : `以上一课上神${c.down}为下，`}其上天盘为 <b>${c.upCh}</b></li>`).join('')}</ul><p class="rule">十干寄宫：甲寅 乙辰 丙戊巳 丁己未 庚申 辛戌 壬亥 癸丑。</p>`;
@@ -1503,9 +1519,9 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   const OPT_KEY = 'liuren-opts-v1';
   function readOpts() {
     const lat = parseFloat($('o-lat').value), lon = parseFloat($('o-lon').value);
-    return { dayChange: +$('o-day').value, dayNight: $('o-dn').value, lat: isFinite(lat) ? lat : 39.9, lon: isFinite(lon) ? lon : 116.4 };
+    return { dayChange: +$('o-day').value, dayNight: $('o-dn').value, solar: $('o-solar').checked, lat: isFinite(lat) ? lat : 39.9, lon: isFinite(lon) ? lon : 116.4 };
   }
-  const optSummary = (o) => `${LR.OPT_TEXT.dayChange[o.dayChange]} · ${o.dayNight === 'sun' ? `日出日落（${o.lat}°N ${o.lon}°E）` : '卯申分昼夜'}`;
+  const optSummary = (o) => `${LR.OPT_TEXT.dayChange[o.dayChange]} · ${o.dayNight === 'sun' ? '日出日落分昼夜' : '卯申分昼夜'} · ${o.solar ? '真太阳时' : '北京时间'}${o.solar || o.dayNight === 'sun' ? `（${o.lat}°N ${o.lon}°E）` : ''}`;
   function impact(id, same, html) { const el = $('i-' + id); el.hidden = false; el.className = 'impact ' + (same ? 'same' : 'diff'); el.innerHTML = html; }
   function updateNotes() {
     const v = $('dt').value; if (!v) return;
@@ -1514,11 +1530,16 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     try {
       const a = LR.cast(y, m, d, hh, mm, Object.assign({}, o, { dayChange: 23 })), b = LR.cast(y, m, d, hh, mm, Object.assign({}, o, { dayChange: 0 }));
       const same = a.steps.pillars.day === b.steps.pillars.day;
-      impact('day', same, same ? '按你填的时间：不在 23 点到 0 点之间，<b>两种换日结果相同。</b>' : `按你填的时间：正好在 23 点后，<b>日柱会不同</b>（23 点换日为 ${a.steps.pillars.day}，0 点换日为 ${b.steps.pillars.day}），四课三传都可能不同。`);
+      const when = o.solar ? `按你填的时间换算成真太阳时 ${a.steps.pillars.clock.slice(11)}` : '按你填的时间';
+      impact('day', same, same ? `${when}：不在 23 点到 0 点之间，<b>两种换日结果相同。</b>` : `${when}：正好在 23 点后，<b>日柱会不同</b>（23 点换日为 ${a.steps.pillars.day}，0 点换日为 ${b.steps.pillars.day}），四课三传都可能不同。`);
       const c1 = LR.cast(y, m, d, hh, mm, Object.assign({}, o, { dayNight: 'maoshen' })), c2 = LR.cast(y, m, d, hh, mm, Object.assign({}, o, { dayNight: 'sun' }));
       const s2 = c1.steps.gen.isDay === c2.steps.gen.isDay;
       const sun = c2.steps.gen.sun, hm = (x) => `${String(Math.floor(x)).padStart(2, '0')}:${String(Math.round((x % 1) * 60) % 60).padStart(2, '0')}`;
       impact('dn', s2, `按你填的时间：卯申分界为${c1.steps.gen.isDay ? '昼' : '夜'}；北纬 ${o.lat}°、东经 ${o.lon}° 当天日出 ${hm(sun.rise)}、日落 ${hm(sun.set)}（真太阳时），为${c2.steps.gen.isDay ? '昼' : '夜'}。` + (s2 ? '<b>两种分法结果相同。</b>' : '<b>两种分法结果不同，贵人和十二天将会变。</b>'));
+      const t1 = LR.cast(y, m, d, hh, mm, Object.assign({}, o, { solar: true })), t0 = LR.cast(y, m, d, hh, mm, Object.assign({}, o, { solar: false }));
+      const sameT = t1.steps.pillars.hour === t0.steps.pillars.hour && t1.steps.pillars.day === t0.steps.pillars.day;
+      const off = (o.lon - 120) * 4 + t1.steps.pillars.eot;
+      impact('solar', sameT, `东经 ${o.lon}° 的真太阳时为 ${t1.steps.pillars.clock.slice(11)}（与北京时间差 ${off >= 0 ? '+' : ''}${off.toFixed(0)} 分钟）。` + (sameT ? `<b>占时仍是${t0.steps.pillars.hour[1]}时，结果相同。</b>` : `<b>占时会从${t0.steps.pillars.hour[1]}时变成${t1.steps.pillars.hour[1]}时，天盘、四课、三传都会不同。</b>`));
     } catch (e) { /* 时间不完整时不显示 */ }
   }
   function syncOpts() {
@@ -1526,17 +1547,17 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     updateNotes();
     const o = readOpts();
     $('optSum').textContent = optSummary(o);
-    $('o-geo').hidden = o.dayNight !== 'sun';
+    $('o-geo').hidden = o.dayNight !== 'sun' && !o.solar;
     try { localStorage.setItem(OPT_KEY, JSON.stringify(o)); } catch (e) { /* 无痕模式等 */ }
   }
   (function loadOpts() {
     let o = null;
     try { o = JSON.parse(localStorage.getItem(OPT_KEY) || 'null'); } catch (e) { o = null; }
     o = Object.assign({}, LR.DEFAULT_OPTS, o || {});
-    $('o-day').value = String(o.dayChange); $('o-dn').value = o.dayNight; $('o-lat').value = o.lat; $('o-lon').value = o.lon;
+    $('o-day').value = String(o.dayChange); $('o-dn').value = o.dayNight; $('o-solar').checked = !!o.solar; $('o-lat').value = o.lat; $('o-lon').value = o.lon;
     syncOpts();
   })();
-  for (const id of ['o-day', 'o-dn', 'o-lat', 'o-lon']) $(id).addEventListener('change', syncOpts);
+  for (const id of ['o-day', 'o-dn', 'o-solar', 'o-lat', 'o-lon']) $(id).addEventListener('change', syncOpts);
   $('dt').addEventListener('input', updateNotes); $('dt').addEventListener('change', updateNotes);
 
   $('form').addEventListener('submit', (e) => {
