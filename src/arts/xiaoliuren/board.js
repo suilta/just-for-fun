@@ -11,17 +11,19 @@ export const moveMs = 140;
 export const legend = '<span>大安 → 留连 → 速喜 → 赤口 → 小吉 → 空亡，顺时针循环</span>';
 
 // 六个指节的位置（百分比）：大安食指根、留连食指尖、速喜中指尖、赤口无名指尖、小吉无名指根、空亡中指根
-const JOINT = [[34, 62], [34, 30], [50, 23], [66, 30], [66, 62], [50, 66]];
+const JOINT = [[26, 62], [26, 30], [42, 23], [58, 30], [58, 62], [42, 66]];
 
 function handSvg() {
-  const finger = (x, top) => `<rect x="${x - 21}" y="${top}" width="42" height="${222 - top}" rx="21" class="fg"/>`;
-  return `<svg viewBox="0 0 300 300" class="hand" aria-hidden="true">
-    <path d="M60 205 Q60 300 150 300 Q240 300 240 205 Z" class="palm"/>
-    ${finger(102, 52)}${finger(150, 30)}${finger(198, 52)}
+  const finger = (x, top, w = 42) => `<rect x="${x - w / 2}" y="${top}" width="${w}" height="${222 - top}" rx="${w / 2}" class="fg"/>`;
+  const name = (x, top, t) => `<text x="${x}" y="${top - 8}" text-anchor="middle" class="fn">${t}</text>`;
+  // 整只手向左移 24，使四指居中；小指较短较细
+  return `<svg viewBox="0 0 300 300" class="hand" aria-hidden="true"><g transform="translate(-24 0)">
+    <path d="M60 205 Q60 300 162 300 Q272 300 272 205 Z" class="palm"/>
+    ${finger(102, 52)}${finger(150, 30)}${finger(198, 52)}${finger(246, 92, 36)}
     <path d="M60 230 Q24 210 30 168 Q34 150 52 160 Q66 168 70 200" class="fg thumb"/>
-    <path d="M84 135 L120 135 M132 125 L168 125 M180 135 L216 135" class="crease"/>
-    <text x="102" y="292" text-anchor="middle" class="fn">食指</text><text x="150" y="292" text-anchor="middle" class="fn">中指</text><text x="198" y="292" text-anchor="middle" class="fn">无名指</text>
-  </svg>`;
+    <path d="M84 135 L120 135 M132 125 L168 125 M180 135 L216 135 M231 160 L261 160" class="crease"/>
+    ${name(102, 52, '食指')}${name(150, 30, '中指')}${name(198, 52, '无名指')}${name(246, 92, '小指')}
+  </g></svg>`;
 }
 
 export function mount(host, C, sched) {
@@ -36,7 +38,8 @@ export function mount(host, C, sched) {
       <div class="seal off" id="seal" aria-hidden="true">课成</div></div></div>`;
   const $ = (id) => host.querySelector('#' + id);
   const at = (el, i, dy = 0) => { el.style.left = JOINT[i][0] + '%'; el.style.top = (JOINT[i][1] + dy) + '%'; };
-  const markPos = (k) => { const m = $('mk' + k); at(m, C.segs[k].to, 0); m.style.transform = `translate(${-50 + (k - 1) * 70}%, 120%)`; };
+  // 月、日、时标记放在指节下方，并排不重叠
+  const markPos = (k) => { const m = $('mk' + k); at(m, C.segs[k].to, 7.5); m.style.transform = `translate(${-50 + (k - 1) * 120}%, 0)`; };
   const hl = (i, on = true) => $('jt' + i).classList.toggle('hl', on);
 
   function staticState(k) {

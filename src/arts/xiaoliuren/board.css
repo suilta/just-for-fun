@@ -26,3 +26,4 @@
 .xl .res b { font-family: var(--f-display); font-size: clamp(22px, 4.4vw, 32px); color: var(--accent); }
 .xl .res em { font-style: normal; font-size: 13px; }
 @media (prefers-reduced-motion: reduce) { .xl * { transition: none !important; } }
+@media (max-width: 520px) { .xl .jt { min-width: 46px; padding: 3px 4px; } .xl .jt b { font-size: 14px; } .xl .jt span { font-size: 10px; } }
