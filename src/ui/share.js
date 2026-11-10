@@ -21,7 +21,7 @@ export async function renderShareCard({ host, art, C, question, meta }) {
     ${question ? `<div class="sc-q">问：${esc(question)}</div>` : ''}
     <div class="sc-meta">${meta}</div>
     <div class="sc-board"></div>
-    <div class="sc-foot">三式排盘 · ${stamp} · 只排盘不断吉凶</div>`;
+    <div class="sc-foot">观象 · ${stamp} · 只排盘不断吉凶</div>`;
   const clone = host.cloneNode(true);
   // 截图用的盘面去掉三维翻转（部分浏览器无法把它画进图片），不带“盘成”印章
   clone.classList.add('snap');

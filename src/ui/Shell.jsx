@@ -120,7 +120,7 @@ export default function Shell(props) {
   return (
     <>
       <header class="top">
-        <a class="brand" href="#">三式{phase() !== 'intro' ? ' · ' + art.name : ''}</a>
+        <a class="brand" href="#">观象{phase() !== 'intro' ? ' · ' + art.name : ''}</a>
         <Show when={phase() === 'ritual'}><button type="button" class="skip" onClick={finish}>跳过 ›</button></Show>
       </header>
 

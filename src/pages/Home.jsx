@@ -68,15 +68,19 @@ const WEST = [
 ];
 
 export default function Home() {
-  onMount(() => { document.title = '三式排盘'; });
+  onMount(() => { document.title = '观象 · 排盘动画'; });
   return (
     <main class="home fade-in">
       <header class="hero">
-        <h1>三式</h1>
-        <p class="lead">奇门遁甲 · 大六壬 · 太乙神数</p>
-        <p class="intro">古人称这三门术数为“三式”。这里把每一式的排盘过程一步步做成动画：节气、干支、宫位怎么推出来，一眼看得见。排完会生成一段完整的盘面文字，可以交给 AI 或懂行的人解读。</p>
+        <h1>观象</h1>
+        <p class="lead">排盘动画 · 中西术数</p>
+        <p class="intro">“仰以观于天文，俯以察于地理。”这里把奇门、六壬、太乙、八字、易卦、塔罗与星盘的排盘过程一步步做成动画：节气、干支、宫位、星辰怎么推出来，一眼看得见。排完会生成一段完整的盘面文字，可以交给 AI 或懂行的人解读。</p>
       </header>
-      <section class="cards" aria-label="选择一式">
+      <section class="group">
+        <h2>三式</h2>
+        <p>奇门遁甲、大六壬、太乙神数，古人合称“三式”，用起盘那一刻的时间问事。</p>
+      </section>
+      <section class="cards" aria-label="三式">
         <For each={CARDS}>{(c) => (
           <a class={'card ' + c.tone} href={'#' + c.id}>
             <span class="name">{c.name}</span>
