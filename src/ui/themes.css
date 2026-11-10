@@ -85,3 +85,19 @@
   --bg: #161013; --surface: #1e171a; --cell: #241c20; --ink: #efe5e8; --muted: #a8979c; --line: #3b2f33;
   --accent: #e48aa8; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(228, 138, 168, .14);
 }
+
+/* 小六壬：琥珀 */
+:root[data-art="xiaoliuren"] {
+  --bg: #efebe5; --surface: #faf7f2; --cell: #fdfbf8; --ink: #241e18; --muted: #6b6157; --line: #d6ccbf;
+  --accent: #b0621f; --gold: #9a6f12; --cinnabar: #b0362a; --jade: #2f7a5c; --hl: rgba(176, 98, 31, .12);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-art="xiaoliuren"]:not([data-theme="light"]) {
+    --bg: #16120e; --surface: #1e1914; --cell: #241e18; --ink: #efe7dc; --muted: #a89b8c; --line: #3b3229;
+    --accent: #eea36a; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(238, 163, 106, .15);
+  }
+}
+:root[data-art="xiaoliuren"][data-theme="dark"] {
+  --bg: #16120e; --surface: #1e1914; --cell: #241e18; --ink: #efe7dc; --muted: #a89b8c; --line: #3b3229;
+  --accent: #eea36a; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(238, 163, 106, .15);
+}

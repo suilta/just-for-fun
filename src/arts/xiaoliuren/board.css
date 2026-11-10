@@ -1,0 +1,28 @@
+/* 小六壬掐指盘：手掌剪影，六个指节为位，拇指尖逐节掐数 */
+.xl .board { background: var(--cell); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.xl .board.done { box-shadow: inset 0 0 0 1px var(--gold); }
+.xl .hand { position: absolute; inset: 0; width: 100%; height: 100%; }
+.xl .hand .palm, .xl .hand .fg { fill: var(--hl); stroke: var(--line); stroke-width: 2; }
+.xl .hand .thumb { fill: var(--surface); }
+.xl .hand .crease { stroke: var(--line); stroke-width: 1.5; fill: none; }
+.xl .hand .fn { fill: var(--muted); font-size: 11px; font-family: var(--f-display); }
+.xl .jt { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; padding: 6px 8px; min-width: 64px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--line); transition: background .2s, box-shadow .2s, transform .3s; z-index: 2; }
+.xl .jt b { font-family: var(--f-display); font-size: clamp(15px, 3vw, 20px); }
+.xl .jt span { font-size: 11px; color: var(--muted); }
+.xl .jt.hl { background: var(--hl); box-shadow: 0 0 0 2px var(--accent); }
+.xl .jt.win { background: var(--accent); color: var(--surface); box-shadow: 0 0 0 3px var(--gold); transform: translate(-50%, -50%) scale(1.12); }
+.xl .jt.win span { color: var(--surface); }
+.xl .tip { position: absolute; transform: translate(-50%, -50%); z-index: 4; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--cinnabar); color: var(--surface); font-family: var(--f-mono); font-weight: 700; font-size: 13px; box-shadow: 0 4px 10px rgba(0, 0, 0, .2);
+  transition: left var(--mv, .14s) ease-out, top var(--mv, .14s) ease-out, opacity .3s; }
+.xl .tip.off, .xl .mk.off, .xl .cal.off, .xl .res.off { opacity: 0; }
+.xl .mk { position: absolute; z-index: 3; font-size: 11px; font-weight: 700; padding: 0 5px; border-radius: 3px; background: var(--gold); color: var(--surface); transition: opacity .4s; }
+.xl .cal, .xl .res { position: absolute; left: 50%; transform: translateX(-50%); z-index: 5; display: grid; justify-items: center; gap: 2px; padding: 12px 20px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, .08); transition: opacity .5s; text-align: center; }
+.xl .cal { top: 40%; } .xl .res { top: 78%; max-width: 86%; }
+.xl .cal span, .xl .res span { font-size: 12px; color: var(--muted); }
+.xl .cal b { font-family: var(--f-display); font-size: clamp(18px, 3.4vw, 24px); }
+.xl .res b { font-family: var(--f-display); font-size: clamp(22px, 4.4vw, 32px); color: var(--accent); }
+.xl .res em { font-style: normal; font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { .xl * { transition: none !important; } }

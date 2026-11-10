@@ -14,9 +14,9 @@
 .card .asks { font-size: 13px; color: var(--muted); line-height: 1.7; }
 .card .how { font-size: 12.5px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 8px; }
 .card .card-go { justify-self: start; font-weight: 700; color: var(--c); }
-.card.bz { --c: #8a5a1f; } .card.tr { --c: #3b4a8a; } .card.mh { --c: #a0365a; } .card.qm { --c: #2c5a86; } .card.lr { --c: #6b3fa0; } .card.ty { --c: #2f6b4f; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .card.bz { --c: #d6a865; } :root:not([data-theme="light"]) .card.tr { --c: #a3b1ea; } :root:not([data-theme="light"]) .card.mh { --c: #e48aa8; } :root:not([data-theme="light"]) .card.qm { --c: #84aedb; } :root:not([data-theme="light"]) .card.lr { --c: #b99be0; } :root:not([data-theme="light"]) .card.ty { --c: #7cc4a0; } }
-:root[data-theme="dark"] .card.bz { --c: #d6a865; } :root[data-theme="dark"] .card.tr { --c: #a3b1ea; } :root[data-theme="dark"] .card.mh { --c: #e48aa8; } :root[data-theme="dark"] .card.qm { --c: #84aedb; } :root[data-theme="dark"] .card.lr { --c: #b99be0; } :root[data-theme="dark"] .card.ty { --c: #7cc4a0; }
+.card.bz { --c: #8a5a1f; } .card.tr { --c: #3b4a8a; } .card.mh { --c: #a0365a; } .card.xl { --c: #b0621f; } .card.qm { --c: #2c5a86; } .card.lr { --c: #6b3fa0; } .card.ty { --c: #2f6b4f; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .card.bz { --c: #d6a865; } :root:not([data-theme="light"]) .card.tr { --c: #a3b1ea; } :root:not([data-theme="light"]) .card.mh { --c: #e48aa8; } :root:not([data-theme="light"]) .card.xl { --c: #eea36a; } :root:not([data-theme="light"]) .card.qm { --c: #84aedb; } :root:not([data-theme="light"]) .card.lr { --c: #b99be0; } :root:not([data-theme="light"]) .card.ty { --c: #7cc4a0; } }
+:root[data-theme="dark"] .card.bz { --c: #d6a865; } :root[data-theme="dark"] .card.tr { --c: #a3b1ea; } :root[data-theme="dark"] .card.mh { --c: #e48aa8; } :root[data-theme="dark"] .card.xl { --c: #eea36a; } :root[data-theme="dark"] .card.qm { --c: #84aedb; } :root[data-theme="dark"] .card.lr { --c: #b99be0; } :root[data-theme="dark"] .card.ty { --c: #7cc4a0; }
 .group { max-width: 70ch; margin: 0 auto -16px; text-align: center; display: grid; gap: 6px; }
 .group h2 { font-size: 24px; letter-spacing: .3em; margin-right: -.3em; }
 .group p { margin: 0; color: var(--muted); }

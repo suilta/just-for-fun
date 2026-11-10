@@ -12,6 +12,7 @@ import * as TR from '../src/arts/tarot/core.js';
 import { DECK } from '../src/arts/tarot/cards.js';
 import { toLunar } from '../src/core/lunar.js';
 import * as MH from '../src/arts/meihua/core.js';
+import * as XL from '../src/arts/xiaoliuren/core.js';
 const QM = { ...astro, ...cal, ...qimen };
 
 let pass = 0, fail = 0;
@@ -300,6 +301,22 @@ for (const [yr, label, kook, gong, wc, home, sf, away, pats] of TY_CASES) {
   // 时间起卦取数：2026-11-10 14:30 为农历丙午年十月初二未时
   const t = MH.cast(2026, 11, 10, 14, 30);
   check('时间起卦取数', t.steps.nums.list.map((x) => x.v).join() === '7,10,2,8' && t.ben.name === '离为火' && t.moving === 3);
+}
+
+// ── 小六壬：逐段掐数与速算公式（月 + 日 + 时 − 2）÷ 6 一致 ──
+{
+  const c = XL.cast(2026, 11, 10, 14, 30);
+  check('小六壬 2026-11-10 未时', c.segs.map((g) => XL.SIX[g.to].name).join() === '赤口,小吉,空亡', c.segs.map((g) => XL.SIX[g.to].name).join());
+  let ok = true;
+  for (let i = 0; i < 3000; i++) {
+    const t = new Date(Date.UTC(1990, 0, 1) + rnd() * 50 * 365.25 * 864e5);
+    const r = XL.cast(t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate(), t.getUTCHours(), t.getUTCMinutes());
+    const [mm, dd, hh] = r.segs.map((g) => g.v);
+    if (r.resultIdx !== mod(mm + dd + hh - 3, 6)) { ok = false; break; }
+  }
+  check('小六壬速算公式', ok);
+  const n = XL.cast(2026, 11, 10, 14, 30, { method: 'num', n1: 1, n2: 1, n3: 1 });
+  check('小六壬报数 1 1 1 落大安', n.result.name === '大安');
 }
 
 console.log(`课体分布（${N} 课）：`, seen);
