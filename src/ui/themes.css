@@ -101,3 +101,19 @@
   --bg: #16120e; --surface: #1e1914; --cell: #241e18; --ink: #efe7dc; --muted: #a89b8c; --line: #3b3229;
   --accent: #eea36a; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(238, 163, 106, .15);
 }
+
+/* 六爻：青铜 */
+:root[data-art="liuyao"] {
+  --bg: #e8ecea; --surface: #f6f9f8; --cell: #fbfdfc; --ink: #18211f; --muted: #5c6a67; --line: #c7d2cf;
+  --accent: #2c6e6a; --gold: #9a6f12; --cinnabar: #b0362a; --jade: #2f7a5c; --hl: rgba(44, 110, 106, .12);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-art="liuyao"]:not([data-theme="light"]) {
+    --bg: #0f1514; --surface: #161e1c; --cell: #1b2422; --ink: #e2ebe9; --muted: #93a5a1; --line: #2c3a37;
+    --accent: #7cc9c2; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(124, 201, 194, .15);
+  }
+}
+:root[data-art="liuyao"][data-theme="dark"] {
+  --bg: #0f1514; --surface: #161e1c; --cell: #1b2422; --ink: #e2ebe9; --muted: #93a5a1; --line: #2c3a37;
+  --accent: #7cc9c2; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(124, 201, 194, .15);
+}

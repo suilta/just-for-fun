@@ -13,6 +13,7 @@ import { DECK } from '../src/arts/tarot/cards.js';
 import { toLunar } from '../src/core/lunar.js';
 import * as MH from '../src/arts/meihua/core.js';
 import * as XL from '../src/arts/xiaoliuren/core.js';
+import * as LY from '../src/arts/liuyao/core.js';
 const QM = { ...astro, ...cal, ...qimen };
 
 let pass = 0, fail = 0;
@@ -317,6 +318,33 @@ for (const [yr, label, kook, gong, wc, home, sf, away, pats] of TY_CASES) {
   check('小六壬速算公式', ok);
   const n = XL.cast(2026, 11, 10, 14, 30, { method: 'num', n1: 1, n2: 1, n3: 1 });
   check('小六壬报数 1 1 1 落大安', n.result.name === '大安');
+}
+
+// ── 六爻：八宫、世应、纳甲、六亲、伏神（与经典卦例对照）──
+{
+  const fix = (vals) => { const c = LY.cast(2026, 11, 10, 14, 30); c.tosses = vals.map((v) => ({ value: v })); return LY.analyze(c); };
+  const L = (s) => s.split('').map((x) => (x === '1' ? 7 : 8)); // 自初爻起
+  check('八宫六十四卦', Object.keys(LY.PALACE).length === 64);
+  const gou = fix(L('011111'));
+  check('姤：乾宫一世，世初应四', gou.palName === '乾' && gou.gen === '一世' && gou.shi === 1 && gou.ying === 4);
+  check('姤：纳甲六亲', gou.yaos.map((y) => y.qin + y.gz).join(' ') === '父母辛丑 子孙辛亥 兄弟辛酉 官鬼壬午 兄弟壬申 父母壬戌');
+  check('姤：妻财伏二爻甲寅', gou.yaos[1].fu && gou.yaos[1].fu.qin === '妻财' && gou.yaos[1].fu.gz === '甲寅');
+  const fu = fix(L('100000'));
+  check('复：坤宫一世，父母伏二爻乙巳', fu.palName === '坤' && fu.gen === '一世' && fu.yaos[1].fu?.gz === '乙巳');
+  check('大有：乾宫归魂世三', (() => { const a = fix(L('111101')); return a.palName === '乾' && a.gen === '归魂' && a.shi === 3; })());
+  check('晋：乾宫游魂世四', (() => { const a = fix(L('000101')); return a.palName === '乾' && a.gen === '游魂' && a.shi === 4 && a.yaos[0].fu?.gz === '甲子'; })());
+  const huan = fix(L('010011'));
+  check('涣：离宫五世，官鬼伏三爻、妻财伏四爻', huan.palName === '离' && huan.gen === '五世' && huan.yaos[2].fu?.gz === '己亥' && huan.yaos[3].fu?.gz === '己酉');
+  // 动变：地水师三爻老阴动，变地风升，变爻父母辛酉
+  const shi = fix([8, 7, 6, 8, 8, 8]);
+  check('师之升', shi.ben.name === '地水师' && shi.bian.name === '地风升' && shi.yaos[2].bian?.gz === '辛酉' && shi.yaos[2].bian?.qin === '父母');
+  // 六神：戊日起勾陈，甲日起青龙
+  check('六神戊日起勾陈', shi.yaos.map((y) => y.god).join('') === '勾陈螣蛇白虎玄武青龙朱雀');
+  // 摇钱只产生 6、7、8、9，且四种都会出现
+  const seenV = new Set(); for (let i = 0; i < 400; i++) seenV.add(LY.tossCoins().value);
+  check('摇钱取值', [...seenV].sort().join() === '6,7,8,9');
+  const pending = LY.cast(2026, 11, 10, 14, 30);
+  check('未摇满不生成原文', LY.toText(pending, '') === '（起卦尚未完成）' && pending.tosses.length === 0);
 }
 
 console.log(`课体分布（${N} 课）：`, seen);
