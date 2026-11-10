@@ -97,7 +97,8 @@ button.primary:hover:not(:disabled) { color: var(--surface); filter: brightness(
 .board.done .cell { box-shadow: inset 0 0 0 1px var(--gold); }
 
 .ke4 { display: flex; flex-direction: row-reverse; gap: clamp(4px, 1.2vw, 10px); }
-.ke { display: grid; justify-items: center; gap: 0; min-width: clamp(30px, 6vw, 44px); padding: 2px 0; border-radius: 4px; animation: fadein .45s ease both; }
+.ke { display: grid; justify-items: center; gap: 0; min-width: clamp(30px, 6vw, 44px); padding: 2px 0; border-radius: 4px; transition: opacity .45s ease, transform .45s ease; }
+.ke.pend, .chuan div.pend { opacity: 0; transform: translateY(6px); }
 .ke .g { font-size: clamp(9px, 1.5vw, 12px); color: var(--gold); min-height: 1.3em; }
 .ke .u { font-family: var(--f-display); font-weight: 900; font-size: clamp(18px, 3.4vw, 26px); color: var(--accent); line-height: 1.15; }
 .ke .d { font-family: var(--f-display); font-weight: 700; font-size: clamp(15px, 2.8vw, 21px); line-height: 1.15; border-top: 1px solid var(--line); padding-top: 2px; }
@@ -106,13 +107,15 @@ button.primary:hover:not(:disabled) { color: var(--surface); filter: brightness(
 .ke.on { background: var(--hl); }
 .method { font-family: var(--f-display); font-weight: 900; color: var(--cinnabar); font-size: clamp(13px, 2.2vw, 16px); min-height: 1.4em; }
 .chuan { display: grid; gap: 1px; font-size: clamp(11px, 1.9vw, 14px); }
-.chuan div { display: grid; grid-template-columns: 2.2em 1.4em 1.4em 3em 3em; gap: 4px; align-items: baseline; animation: fadein .45s ease both; }
+.chuan div { display: grid; grid-template-columns: 2.2em 1.4em 1.4em 3em 3em; gap: 4px; align-items: baseline; transition: opacity .45s ease, transform .45s ease; }
+.method { transition: opacity .45s ease; }
+.method.pend { opacity: 0; }
 .chuan .p { color: var(--muted); font-size: .85em; }
 .chuan .z { font-family: var(--f-display); font-weight: 900; color: var(--accent); font-size: 1.25em; }
 .chuan .dg { color: var(--muted); }
 .chuan .gn { color: var(--gold); }
 .chuan .q { color: var(--ink); }
-.chuan .k { color: var(--cinnabar); }
+.chuan .q.k { color: var(--cinnabar); }
 
 .paths { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .paths .arrow { fill: none; stroke: var(--cinnabar); stroke-width: 2; opacity: .7; marker-end: url(#ah); }
@@ -303,6 +306,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
       chips['gen' + z].textContent = C.plate[z].general || '';
       chips['dun' + z].textContent = C.plate[z].dun || '';
     }
+    buildCenter();
   }
 
   const S = () => C.steps;
@@ -325,11 +329,31 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   function tag(z, text) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = text; $('cell' + z).appendChild(t); }
 
   // ── 中央：四课与三传 ──
+  // 四课、三传的元素只建一次；之后只改文字和显隐，已显示的部分不会重新淡入
+  function buildCenter() {
+    $('ke4').innerHTML = C.ke4.map((k) => `<div class="ke pend" id="ke${k.no}"><span class="g"></span><span class="u">${k.upCh}</span><span class="d">${k.down}</span><span class="x"></span><span class="n">${'一二三四'[k.no - 1]}课</span></div>`).join('');
+    $('chuan').innerHTML = C.chuan.map((t, i) => `<div class="pend" id="ch${i}"><span class="p">${t.pos}</span><span class="dg"></span><span class="z">${t.zhi}</span><span class="gn"></span><span class="q"></span></div>`).join('');
+    $('method').textContent = S().chuan.method; $('method').classList.add('pend');
+  }
+  const setText = (el, t) => { if (el.textContent !== t) el.textContent = t; };
   function renderCenter(opt) {
     const { keN = 0, marks = false, chuanN = 0, gens = false, dun = false, method = false } = opt;
-    $('ke4').innerHTML = C.ke4.slice(0, keN).map((k) => `<div class="ke" id="ke${k.no}"><span class="g">${gens ? k.general : ''}</span><span class="u">${k.upCh}</span><span class="d">${k.down}</span><span class="x">${marks ? (k.zei ? '贼' : k.ke ? '克' : '') : ''}</span><span class="n">${'一二三四'[k.no - 1]}课</span></div>`).join('');
-    $('method').textContent = method ? S().chuan.method : '';
-    $('chuan').innerHTML = C.chuan.slice(0, chuanN).map((t) => `<div><span class="p">${t.pos}</span><span class="dg">${dun ? t.dun : ''}</span><span class="z">${t.zhi}</span><span class="gn">${gens ? t.general : ''}</span><span class="${t.kong && dun ? 'k' : 'q'}">${dun ? t.qin + (t.kong ? '空' : '') : ''}</span></div>`).join('');
+    C.ke4.forEach((k, i) => {
+      const el = $('ke' + k.no);
+      el.classList.toggle('pend', i >= keN);
+      setText(el.querySelector('.g'), gens ? k.general : '');
+      setText(el.querySelector('.x'), marks ? (k.zei ? '贼' : k.ke ? '克' : '') : '');
+    });
+    $('method').classList.toggle('pend', !method);
+    C.chuan.forEach((t, i) => {
+      const el = $('ch' + i);
+      el.classList.toggle('pend', i >= chuanN);
+      setText(el.querySelector('.dg'), dun ? t.dun : '');
+      setText(el.querySelector('.gn'), gens ? t.general : '');
+      const q = el.querySelector('.q');
+      setText(q, dun ? t.qin + (t.kong ? '空' : '') : '');
+      q.classList.toggle('k', !!(t.kong && dun));
+    });
   }
   const CENTER = [
     {}, {}, {}, { keN: 4 }, { keN: 4, marks: true, chuanN: 3, method: true },
