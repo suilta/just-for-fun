@@ -533,6 +533,13 @@ for (const [yr, label, kook, gong, wc, home, sf, away, pats] of TY_CASES) {
     if (P.hour[0] === '甲') check(`六甲时伏吟 ${P.hour}`, names.includes('星伏吟') && names.includes('门伏吟'));
     check(`五不遇时 ${P.day}${P.hour}`, names.includes('五不遇时') === BUYU.includes(P.day[0] + P.hour));
     check(`时干入墓 ${P.hour}`, names.includes('时干入墓') === MU6.includes(P.hour));
+    check(`天显时格 ${P.hour}`, names.includes('天显时格（六甲天辅时）') === (P.hour[0] === '甲'));
+    const SY = ['甲己巳', '己己巳', '乙甲申', '庚甲申', '丙甲午', '辛甲午', '丁甲辰', '壬甲辰', '戊甲寅', '癸甲寅'];
+    check(`天辅之时 ${P.day}${P.hour}`, names.includes('天辅之时') === SY.includes(P.day[0] + P.hour));
+    const WH = ['甲己巳', '己甲子', '己甲戌', '乙庚辰', '庚乙酉', '丙辛卯', '辛丙申', '丁壬寅', '壬丁未', '戊癸丑', '戊癸亥', '癸戊午'];
+    check(`五合时 ${P.day}${P.hour}`, names.includes('五合时（林氏天辅时）') === WH.includes(P.day[0] + P.hour));
+    check('天网四张', names.includes('天网四张') === (P.hour[0] === '癸' || C.patterns.some((x) => x.name === '天网四张' && x.palace)));
+    for (const x of C.patterns.filter((y) => y.name === '虎遁')) check('虎遁有据', x.says.length > 0);
     // 每条格局都带出处与所依
     check('格局带出处', C.patterns.every((x) => x.says && x.says.length && x.quote));
     // 吉凶对称：青龙逃走与白虎猖狂不会出现在同一对干上
