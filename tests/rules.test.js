@@ -21,6 +21,8 @@ import * as Astro from 'astronomy-engine';
 import { readFileSync } from 'node:fs';
 import * as AL from '../src/core/almanac.js';
 import { plain } from '../src/ui/history.js';
+import * as KY from '../src/arts/qimen/keying.js';
+import * as KD from '../src/arts/qimen/keying-data.js';
 const QM = { ...astro, ...cal, ...qimen };
 
 let pass = 0, fail = 0;
@@ -469,6 +471,47 @@ for (const [yr, label, kook, gong, wc, home, sf, away, pats] of TY_CASES) {
   const lc = AL.dayInfo(2026, 2, 4);
   check('立春换年柱', lc.yearChange && lc.yearChange.from === '乙巳' && lc.yearChange.to === '丙午');
   check('摘要转纯文字', plain('<span>甲 <b>乙</b></span>&amp;') === '甲 乙 &');
+}
+
+// ── 奇门古籍克应 ──
+{
+  const G9 = '戊己庚辛壬癸丁丙乙';
+  check('十干克应 81 条齐全', Object.keys(KD.GAN_KEYING).length === 81 && [...G9].every((a) => [...G9].every((b) => KD.GAN_KEYING[a + b]?.name && KD.GAN_KEYING[a + b].text)));
+  const D8 = '休死伤杜开惊生景';
+  check('八门克应 64 条齐全', Object.keys(KD.DOOR_KEYING).length === 64 && [...D8].every((a) => [...D8].every((b) => KD.DOOR_KEYING[a + b]?.gua)));
+  check('八门缺文只有伤加生', Object.entries(KD.DOOR_KEYING).filter(([, v]) => !v.text).map(([k]) => k).join() === '伤生');
+  // 《宝鉴·释迫》：“开门临三、四宫，休门临九宫，生门临一宫，景门临六、七宫，伤、杜二门临二、八宫，死门临一宫，惊门临三、四宫，凡此为迫”
+  const PO = { 开门: [3, 4], 休门: [9], 生门: [1], 景门: [6, 7], 伤门: [2, 8], 杜门: [2, 8], 死门: [1], 惊门: [3, 4] };
+  const PWX = { 1: '水', 2: '土', 3: '木', 4: '木', 6: '金', 7: '金', 8: '土', 9: '火' };
+  const DWX = { 休门: '水', 死门: '土', 伤门: '木', 杜门: '木', 开门: '金', 惊门: '金', 生门: '土', 景门: '火' };
+  for (const d in PO) for (const p of [1, 2, 3, 4, 6, 7, 8, 9]) check(`门迫 ${d}${p}`, (KY.doorPalace(DWX[d], PWX[p]) === '迫') === PO[d].includes(p));
+  // 《统宗》注：“休门加二、五、八宫”为制
+  check('休门受制', [2, 8].every((p) => KY.doorPalace('水', PWX[p]) === '制') && KY.doorPalace('水', '土') === '制');
+  // 九星十二月旺相休囚废速查表（《烟波钓叟歌》《宝鉴》）
+  const TBL = {
+    水: { 旺: '寅卯', 相: '亥子', 休: '巳午', 废: '申酉', 囚: '辰戌丑未' }, 木: { 旺: '巳午', 相: '寅卯', 休: '辰戌丑未', 废: '亥子', 囚: '申酉' },
+    火: { 旺: '辰戌丑未', 相: '巳午', 休: '申酉', 废: '寅卯', 囚: '亥子' }, 土: { 旺: '申酉', 相: '辰戌丑未', 休: '亥子', 废: '巳午', 囚: '寅卯' },
+    金: { 旺: '亥子', 相: '申酉', 休: '寅卯', 废: '辰戌丑未', 囚: '巳午' },
+  };
+  const ZW = { 子: '水', 亥: '水', 寅: '木', 卯: '木', 巳: '火', 午: '火', 申: '金', 酉: '金', 辰: '土', 戌: '土', 丑: '土', 未: '土' };
+  for (const w in TBL) for (const st in TBL[w]) for (const z of TBL[w][st]) check(`九星旺衰 ${w}${z}`, KY.starState(w, ZW[z]) === st);
+  // 逐盘：十干条数 = 天盘干数 × 地盘干数；寄宫多一个地盘干；真甲叠加只在旬首非戊时出现
+  for (let i = 0; i < 300; i++) {
+    const y = 2000 + (i % 30), m = 1 + (i * 7) % 12, d = 1 + (i * 11) % 28, h = (i * 5) % 24;
+    const C = qimen.chart(y, m, d, h, 0, { overlay: true });
+    const K = C.keying, JI = C.steps.ju.ji;
+    for (const k of K.palaces) {
+      const P = C.palaces[k.p];
+      check('十干条数', k.gan.length === P.tianStems.length * (k.p === JI ? 2 : 1));
+      check('十干对应', k.gan.every((g) => KD.GAN_KEYING[g.sky + g.earth].name === g.name));
+      check('八门对应', k.door && k.door.door === P.door && KD.DOOR_KEYING[P.door[0] + k.door.home[0]].gua === k.door.gua);
+      check('八神对应', k.god && k.god.name === P.god);
+      if (K.xunYi === '戊') check('甲子旬无叠加', k.overlay.length === 0);
+      for (const v of k.overlay) check('真甲叠加', [v.sky, v.earth].includes(K.xunYi) && (v.sky === '丙' || v.earth === '丙' || v.sky === '庚' || v.earth === '庚'));
+    }
+    check('原文含克应', /克应条文/.test(qimen.toText(C, '')));
+    check('关闭克应', !/克应条文/.test(qimen.toText(qimen.chart(y, m, d, h, 0, { keying: false }), '')));
+  }
 }
 
 console.log(`课体分布（${N} 课）：`, seen);

@@ -38,6 +38,8 @@ const KE = { 木: '土', 土: '水', 水: '火', 火: '金', 金: '木' }; // A 
 const SHENG = { 木: '火', 火: '土', 土: '金', 金: '水', 水: '木' };
 const ZHI_PALACE = { 子: 1, 丑: 8, 寅: 8, 卯: 3, 辰: 4, 巳: 4, 午: 9, 未: 2, 申: 2, 酉: 7, 戌: 6, 亥: 6 };
 
+import { keying, keyingText } from './keying.js';
+
 // ───────────────────────── 排盘选项 ─────────────────────────
 const DEFAULT_OPTS = {
   yuan: 'chaibu',   // 定局：chaibu 拆补法 / zhirun 置闰法 / maoshan 茅山法
@@ -46,6 +48,9 @@ const DEFAULT_OPTS = {
   dayChange: 23,    // 换日：23 子初换日 / 0 子正换日
   solar: false,     // 是否用真太阳时定日柱、时柱
   lon: 120,         // 出生地或起局地经度（东经，度）
+  keying: true,     // 列出古籍克应条文
+  overlay: true,    // 值符真甲叠加（《烟波》《宝鉴》）
+  starState: 'month', // 九星旺衰：month 按月令 / palace 按落宫
 };
 const OPT_TEXT = {
   yuan: { chaibu: '拆补法', zhirun: '置闰法', maoshan: '茅山法' },
@@ -238,7 +243,7 @@ function chart(y, m, d, h, mi, opts) {
     if (P_.door === DOOR_HOME[p] && doorShift !== 0) add(p, `${P_.door}伏吟`, '平', '此门回到本宫');
   }
 
-  return {
+  const result = {
     input: { y, m, d, h, mi, text: `${y}-${pad(m)}-${pad(d)} ${pad(h)}:${pad(mi)}` },
     opts: o, steps, palaces, patterns,
     summary: {
@@ -246,6 +251,8 @@ function chart(y, m, d, h, mi, opts) {
       ma: maZhi, maPalace, kong: kongZhi, kongPalaces,
     },
   };
+  result.keying = o.keying ? keying(result, o) : null;
+  return result;
 }
 
 // ───────────────────────── 生成给 AI 的文字 ─────────────────────────
@@ -279,6 +286,7 @@ function toText(c, question) {
     for (const pt of c.patterns) L.push(`- ${pt.name}【${pt.kind}】${pt.palace ? PALACE[pt.palace].gua + pt.palace + '宫：' : '全局：'}${pt.why}`);
   } else L.push('格局提示：未识别到常见特殊格局。');
   L.push('');
+  if (c.keying) { L.push(keyingText(c.keying)); L.push(''); }
   L.push('请你作为熟悉奇门遁甲的解读者，基于以上盘面：');
   L.push('1. 先确定用神（按所问之事选取，如求财看生门与戊、谋事看值符与时干、出行看开门等），说明用神落宫的星、门、神、奇仪及旺衰；');
   L.push('2. 分析用神宫与日干、时干所落宫的生克关系；');

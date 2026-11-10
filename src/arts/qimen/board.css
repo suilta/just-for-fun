@@ -29,6 +29,11 @@
 .qm .chip.di { font-family: var(--f-display); font-weight: 700; font-size: clamp(15px, 2.6vw, 20px); color: var(--muted); }
 .qm .chip.badge { font-size: 10px; color: var(--surface); background: var(--cinnabar); padding: 1px 4px; border-radius: 3px; }
 .qm .chip.badge.ma { background: var(--jade); }
+.qm .chip.ky { font-size: clamp(9px, 1.5vw, 11px); color: var(--surface); background: var(--accent); padding: 0 5px; border-radius: 3px; white-space: nowrap; font-weight: 600; }
+.qm .board.keying .pname { visibility: hidden; }
+.explain h3 { font-size: 15px; margin: 10px 0 4px; }
+.explain .pat.ky li { align-items: flex-start; }
+.explain .pat.ky small { color: var(--muted); }
 .qm .chip.key { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .qm .chip.stamp { font-family: var(--f-display); font-weight: 900; color: var(--cinnabar); font-size: clamp(20px, 4vw, 30px); border: 2px solid var(--cinnabar); border-radius: 6px; padding: 2px 8px; background: var(--cell); }
 .qm .chip.stamp.off { transform: translate(-50%, -50%) scale(1.8); }

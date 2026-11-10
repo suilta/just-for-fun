@@ -8,10 +8,11 @@ import { esc } from '../../ui/anim.js';
 import './board.css';
 
 const QM = { PALACE, RING, STAR_HOME, DOOR_HOME, GODS, ZHI, JIEQI };
-export const STAGES = ['四柱节气', '阴阳定局', '布地盘', '旬首值符', '转天盘', '转人盘', '排八神', '空马格局'];
+export const STAGES = ['四柱节气', '阴阳定局', '布地盘', '旬首值符', '转天盘', '转人盘', '排八神', '空马格局', '古籍克应'];
+const KY_ORDER = [4, 9, 2, 3, 7, 8, 1, 6];
 export const moveMs = 380;
 const POS = { 4: [0, 0], 9: [1, 0], 2: [2, 0], 3: [0, 1], 5: [1, 1], 7: [2, 1], 8: [0, 2], 1: [1, 2], 6: [2, 2] };
-const SLOT = { god: [.2, .17], tian: [.8, .17], tian2: [.6, .17], star: [.5, .43], qin: [.5, .62], door: [.22, .8], di: [.8, .8], badge: [.5, .17], badge2: [.5, .3], diCenter: [.5, .5] };
+const SLOT = { god: [.2, .17], tian: [.8, .17], tian2: [.6, .17], star: [.5, .43], qin: [.5, .62], door: [.22, .8], di: [.8, .8], badge: [.5, .17], badge2: [.5, .3], diCenter: [.5, .5], ky: [.5, .93] };
 const P = (p) => `${QM.PALACE[p].gua}${p}宫`;
 const cn = (n) => '〇一二三四五六七八九'[n];
 
@@ -56,6 +57,7 @@ export function mount(host, C, sched) {
     mkChip('tian5', 'tian', C.palaces[5].di);
     C.steps.god.names.forEach((g, i) => mkChip('god' + i, 'god', g));
     mkChip('stamp', 'stamp', cn(C.steps.ju.ju) + '局');
+    if (C.keying) for (const k of C.keying.palaces) mkChip('ky' + k.p, 'ky', k.gan[0] ? k.gan[0].name : '');
     mkChip('kong', 'badge', '空'); mkChip('kong2', 'badge', '空'); mkChip('ma', 'badge ma', '马');
     for (let p = 1; p <= 9; p++) place(chips['di' + p], p, p === 5 ? 'diCenter' : 'di', false);
     for (const p of RING) { place(chips['star' + p], p, 'star', false); place(chips['tian' + p], p, 'tian', false); place(chips['door' + p], p, 'door', false); }
@@ -85,6 +87,7 @@ export function mount(host, C, sched) {
     $('paths').innerHTML = '';
   }
   const hl = (p, cls = 'hl') => $('cell' + p).classList.add(cls);
+  const clearHl = () => cellsAll().forEach((c) => c.classList.remove('hl'));
 
   // 第 k 幕完成后的静态盘面
   function staticState(k) {
@@ -102,7 +105,9 @@ export function mount(host, C, sched) {
     place(chips.stamp, S.ju.ju, 'star', k === 1);
     if (k === 0) drawDial(C.steps.pillars.sunLon);
     if (k === 1) hl(S.ju.ju);
-    if (k === 7) $('board').classList.add('done');
+    if (k >= 7) $('board').classList.add('done');
+    $('board').classList.toggle('keying', k >= 8 && !!C.keying);
+    if (C.keying) for (const kp of C.keying.palaces) place(chips['ky' + kp.p], kp.p, 'ky', k >= 8);
     $('board').classList.toggle('filled', k >= 3);
     if (k === 3) { const xp = S.xun.xunPalace; hl(xp); chips['star' + xp].classList.add('key'); chips['door' + (xp === 5 ? C.steps.ju.ji : xp)].classList.add('key'); }
     if (k === 4) hl(S.tian.target);
@@ -219,6 +224,16 @@ export function mount(host, C, sched) {
       C.patterns.filter((p) => p.palace).forEach((pt, i) => later(1200 + 280 * i, () => hl(pt.palace, 'hot')));
       later(1500 + 280 * C.patterns.length, done); return;
     }
+    if (k === 8) {
+      // 逐宫查克应：依洛书方位走一遍，亮起该宫并写上十干格名
+      if (!C.keying) { later(500, done); return; }
+      $('board').classList.add('keying');
+      KY_ORDER.forEach((p, i) => later(200 + 420 * i, () => {
+        clearHl(); hl(p); place(chips['ky' + p], p, 'ky', true);
+      }));
+      later(200 + 420 * KY_ORDER.length + 300, () => { clearHl(); done(); });
+      return;
+    }
   }
 
 
@@ -239,7 +254,7 @@ export function mount(host, C, sched) {
 
 export function explain(C, k) {
     const S = C.steps, sm = C.summary;
-    const h = (no, t) => `<h2><span class="no">${no + 1}/8</span>${t}</h2>`;
+    const h = (no, t) => `<h2><span class="no">${no + 1}/${STAGES.length}</span>${t}</h2>`;
     let html = '';
     if (k === 0) html = h(0, '四柱与节气') + `
       <div class="kv"><div><span>年柱</span><b>${S.pillars.year}</b></div><div><span>月柱</span><b>${S.pillars.month}</b></div><div><span>日柱</span><b>${S.pillars.day}</b></div><div><span>时柱</span><b>${S.pillars.hour}</b></div></div>
@@ -272,12 +287,30 @@ export function explain(C, k) {
     if (k === 7) html = h(7, '空亡、驿马与格局') + `
       <p>旬空 ${sm.kong.join('、')}，落${sm.kongPalaces.map(P).join('、')}；驿马在${sm.ma}，落${P(sm.maPalace)}。</p>
       ${C.patterns.length ? `<ul class="pat">${C.patterns.map((pt) => `<li><span class="tag ${pt.kind}">${pt.kind}</span><span><b>${pt.name}</b> ${pt.palace ? P(pt.palace) + '：' : ''}${pt.why}</span></li>`).join('')}</ul>` : '<p>未识别到常见特殊格局。</p>'}`;
+    if (k === 8) html = h(8, '古籍克应') + keyingHtml(C);
     return html;
   }
 
+function keyingHtml(C) {
+  const K = C.keying;
+  if (!K) return '<p>古籍克应已在排盘设置中关闭。</p>';
+  const ji = (x) => (x ? '<small>（寄）</small>' : '');
+  const blocks = K.palaces.map((k) => {
+    const rows = [];
+    for (const g of k.gan) rows.push(`<li><span class="tag">十干</span><span>天盘${g.sky}${ji(g.skyJi)}加地盘${g.earth}${ji(g.earthJi)} <b>${g.name}</b>${g.aka ? `<small>（${esc(g.aka)}）</small>` : ''}：${esc(g.text)}<br><small>原书结语：${esc(g.verdict)}${g.bj ? `；宝鉴：${esc(g.bj)}` : ''}</small>${g.alt ? `<br><small>${esc(g.alt)}</small>` : ''}</span></li>`);
+    for (const v of k.overlay) rows.push(`<li><span class="tag">真甲</span><span>本旬甲遁于${K.xunYi}，为值符真甲：天盘${v.sky}加地盘${v.earth}，叠加 <b>${v.name}</b></span></li>`);
+    if (k.door) { const d = k.door; rows.push(`<li><span class="tag">八门</span><span>${d.door}加${d.home} ${d.text ? esc(d.text) : `<b>缺文</b> <small>${esc(d.missing)}</small>`}<br><small>宝鉴：${d.gua}卦；门宫：${d.rel === '比和' ? '比和' : '门' + d.rel}（${d.relDef}）${d.rel === '迫' ? (d.ji ? '，吉门被迫' : '，凶门被迫') : ''}</small></span></li>`); }
+    for (const st of k.stars) rows.push(`<li><span class="tag">九星</span><span>${st.star}（${st.wx}，${st.luck}）按${st.stateBy}为<b>${st.state}</b>；${st.rel}，${st.relText}</span></li>`);
+    if (k.god) rows.push(`<li><span class="tag">八神</span><span>${k.god.name}（${k.god.luck}）<small>${esc(k.god.text || '')}</small></span></li>`);
+    return `<h3>${QM.PALACE[k.p].gua}${k.p}宫</h3><ul class="pat ky">${rows.join('')}</ul>`;
+  });
+  return `<p>按宫查表，只录古籍条文与出处，不作综合判断。各书说法不同的地方并列给出。</p>${blocks.join('')}
+    <p class="rule">出处：十干克应据《奇门遁甲秘笈大全》卷二、《奇门遁甲统宗》卷四，异名据《御定奇门宝鉴》；八门克应据《秘笈》卷四、卷五《八门静应》与《统宗》卷四，卦名据《宝鉴》卷三；门迫、制、和、义据《烟波钓叟歌》及古注；九星旺衰据《烟波钓叟歌》与《宝鉴》卷一《释气应》（${K.opts.starState === 'palace' ? '本盘按落宫，是近人用法' : '本盘按月令'}）；星宫生克据《统宗》卷七《主客论》；八神据《秘笈》卷六。</p>`;
+}
+
 export function caption(C, k, question) {
     const S = C.steps, sm = C.summary;
-    const step = k >= 0 ? `<span class="step">${k + 1} / 8 · ${STAGES[k]}</span>` : '<span class="step">起局</span>';
+    const step = k >= 0 ? `<span class="step">${k + 1} / ${STAGES.length} · ${STAGES[k]}</span>` : '<span class="step">起局</span>';
     const t = [
       `四柱 <b>${S.pillars.year} ${S.pillars.month} ${S.pillars.day} ${S.pillars.hour}</b>，太阳行至${S.pillars.term}`,
       `${S.ju.method === 'zhirun' ? S.ju.juTerm + '（' + S.ju.status + '）' : S.ju.method === 'maoshan' ? '交节第 ' + (Math.floor(S.ju.days) + 1) + ' 天' : '符头' + S.ju.futou}为${S.ju.yuan}，得 <b>${S.ju.dun}${cn(S.ju.ju)}局</b>`,
@@ -287,6 +320,7 @@ export function caption(C, k, question) {
       `值使${S.xun.zhishiDoor}行 ${S.door.stepsN} 步，落 <b>${P(S.door.doorTarget)}</b>，八门随转`,
       `八神随值符，自${P(S.god.start)}${S.god.clockwise ? '顺' : '逆'}排八宫`,
       `旬空${sm.kong.join('')}，驿马在${sm.ma}${C.patterns.length ? `，见${C.patterns.length}处格局` : ''}`,
+      C.keying ? `逐宫查十干、八门克应：${C.keying.palaces.slice(0, 3).map((x) => x.gan[0] ? `${QM.PALACE[x.p].gua}宫<b>${x.gan[0].name}</b>` : '').filter(Boolean).join('、')}……` : '古籍克应已在设置中关闭',
     ];
     return step + `<span>${k >= 0 ? t[k] : esc(C.input.text) + (question ? '　问：' + esc(question) : '')}</span>`;
   }
