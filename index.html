@@ -75,6 +75,21 @@ button.primary:hover:not(:disabled) { color: var(--surface); filter: brightness(
 .altar .field { display: grid; gap: 6px; }
 #go { white-space: nowrap; justify-self: center; margin-top: 8px; padding: 12px 44px; font-size: 18px; letter-spacing: .5em; font-family: var(--f-display); border-radius: 999px; }
 #go span { margin-right: -.5em; }
+.settings { position: relative; width: 100%; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.settings summary { cursor: pointer; padding: 10px 12px; font-size: 13px; color: var(--muted); letter-spacing: .08em; list-style: none; display: flex; justify-content: space-between; gap: 8px; }
+.settings summary::-webkit-details-marker { display: none; }
+.settings summary::after { content: '展开'; color: var(--accent); white-space: nowrap; }
+.settings summary > span:first-child { white-space: nowrap; }
+.settings[open] summary::after { content: '收起'; }
+.settings .sum { color: var(--ink); text-align: right; min-width: 0; }
+.opts { display: grid; gap: 12px; padding: 4px 12px 14px; }
+.opt { display: grid; gap: 4px; }
+.opt select, .opt input[type=number] { font: inherit; color: var(--ink); background: var(--cell); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; width: 100%; }
+.opt .note { font-size: 12px; color: var(--muted); margin: 0; }
+.opt .inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.opt .inline input[type=number] { width: 7em; }
+.opt label.chk { display: flex; gap: 6px; align-items: center; font-size: 14px; }
+.opt label.chk input { width: auto; margin: 0; }
 .altar .hint { position: relative; font-size: 12.5px; color: var(--muted); margin: 0; }
 
 /* 第二、三幕：盘 + 侧栏；排盘时只留盘和一行旁白，居中 */
@@ -186,7 +201,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   <div class="altar fade-in">
     <div class="bagua" aria-hidden="true"><svg viewBox="-100 -100 200 200" id="bagua"></svg></div>
     <h1>奇门遁甲</h1>
-    <div class="sub">时家转盘 · 拆补法</div>
+    <div class="sub" id="sub">时家转盘 · 拆补法</div>
     <form id="form">
       <div class="field">
         <label class="label" for="dt">起局时间（北京时间）</label>
@@ -196,6 +211,46 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
         <label class="label" for="q">所问之事</label>
         <textarea id="q" rows="2" placeholder="心中默念所问，写在这里。例如：下个月换工作是否顺利"></textarea>
       </div>
+      <details class="settings" id="settings">
+        <summary><span>排盘设置</span><span class="sum" id="optSum"></span></summary>
+        <div class="opts">
+          <div class="opt">
+            <label class="label" for="o-yuan">定局法</label>
+            <select id="o-yuan">
+              <option value="chaibu">拆补法：以当前节气配日柱符头</option>
+              <option value="zhirun">置闰法：超神接气，芒种大雪后置闰</option>
+              <option value="maoshan">茅山法：交节后每五天一元</option>
+            </select>
+          </div>
+          <div class="opt">
+            <label class="label" for="o-ji">中五寄宫</label>
+            <select id="o-ji">
+              <option value="kun">恒寄坤二宫</option>
+              <option value="genkun">阳遁寄艮八、阴遁寄坤二</option>
+            </select>
+          </div>
+          <div class="opt">
+            <label class="label" for="o-gods">八神第五、六位</label>
+            <select id="o-gods">
+              <option value="huxuan">白虎、玄武</option>
+              <option value="gouque">勾陈、朱雀</option>
+            </select>
+          </div>
+          <div class="opt">
+            <label class="label" for="o-day">换日</label>
+            <select id="o-day">
+              <option value="23">23 点换日（子初换日）</option>
+              <option value="0">0 点换日（子正换日）</option>
+            </select>
+          </div>
+          <div class="opt">
+            <span class="label">真太阳时</span>
+            <label class="chk" for="o-solar"><input type="checkbox" id="o-solar"> 用真太阳时定日柱、时柱</label>
+            <div class="inline"><label for="o-lon" class="note">起局地东经</label><input type="number" id="o-lon" min="70" max="140" step="0.01" value="120"><span class="note">度</span></div>
+            <p class="note">例如北京 116.40、上海 121.47、成都 104.07、广州 113.26。节气和年柱、月柱始终按真实时刻计算，不受此项影响。</p>
+          </div>
+        </div>
+      </details>
       <button type="submit" class="primary" id="go"><span>起局</span></button>
     </form>
     <p class="hint">所问之事会写进盘面原文，排完后可以复制给 AI 解读。</p>
@@ -233,7 +288,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     <div class="pane" id="pane-raw" hidden>
       <div class="row"><button type="button" id="copy">复制文本</button><span class="small">可以粘贴给任何 AI 解读。</span></div>
       <pre id="out"></pre>
-      <p class="small">节气用截断 VSOP87 自行计算，误差在 1 分钟以内。时间按北京时间处理，没有做真太阳时校正。本页采用拆补法、中五寄坤二。</p>
+      <p class="small" id="foot"></p>
     </div>
 
     <div class="row" id="againRow" hidden><button type="button" id="again">重新起局</button></div>
@@ -313,7 +368,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     }
     mkChip('qin', 'qin', '禽'); chips.star5 = chips.qin;
     mkChip('tian5', 'tian', C.palaces[5].di);
-    QM.GODS.forEach((g, i) => mkChip('god' + i, 'god', g));
+    C.steps.god.names.forEach((g, i) => mkChip('god' + i, 'god', g));
     mkChip('stamp', 'stamp', cn(C.steps.ju.ju) + '局');
     mkChip('kong', 'badge', '空'); mkChip('kong2', 'badge', '空'); mkChip('ma', 'badge ma', '马');
     for (let p = 1; p <= 9; p++) place(chips['di' + p], p, p === 5 ? 'diCenter' : 'di', false);
@@ -327,7 +382,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   const ringAt = (home, s) => RING[((RING.indexOf(home) + s) % 8 + 8) % 8];
     function setStars(s, show) {
     for (const p of RING) { const to = ringAt(p, s); place(chips['star' + p], to, 'star', show); place(chips['tian' + p], to, 'tian', show); }
-    const qTo = ringAt(2, s); place(chips.qin, qTo, 'qin', show); place(chips.tian5, qTo, 'tian2', show);
+    const qTo = ringAt(C.steps.ju.ji, s); place(chips.qin, qTo, 'qin', show); place(chips.tian5, qTo, 'tian2', show);
   }
   function setDoors(s, show) { for (const p of RING) place(chips['door' + p], ringAt(p, s), 'door', show); }
   function setGods(show, count = 8) {
@@ -363,7 +418,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     if (k === 1) hl(S.ju.ju);
     if (k === 7) $('board').classList.add('done');
     $('board').classList.toggle('filled', k >= 3);
-    if (k === 3) { const xp = S.xun.xunPalace; hl(xp); chips['star' + xp].classList.add('key'); chips['door' + (xp === 5 ? 2 : xp)].classList.add('key'); }
+    if (k === 3) { const xp = S.xun.xunPalace; hl(xp); chips['star' + xp].classList.add('key'); chips['door' + (xp === 5 ? C.steps.ju.ji : xp)].classList.add('key'); }
     if (k === 4) hl(S.tian.target);
     if (k === 5) hl(S.door.doorTarget);
     if (k === 6) hl(S.god.start);
@@ -437,17 +492,17 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
       setStars(0, true); place(chips.qin, 5, 'star', true); for (const p of RING) chips['tian' + p].classList.add('off'); chips.tian5.classList.add('off');
       setDoors(0, true);
       later(700, () => { hl(S.xun.xunPalace); $('cell' + S.xun.xunPalace).classList.add('pulse'); });
-      later(1400, () => { const xp = S.xun.xunPalace; chips['star' + xp].classList.add('key'); chips['door' + (xp === 5 ? 2 : xp)].classList.add('key'); });
+      later(1400, () => { const xp = S.xun.xunPalace; chips['star' + xp].classList.add('key'); chips['door' + (xp === 5 ? C.steps.ju.ji : xp)].classList.add('key'); });
       later(2000, done); return;
     }
     if (k === 4) {
-      // 天盘干从地盘干处浮起；天禽先寄坤二；然后整盘顺时针转
+      // 天盘干从地盘干处浮起；天禽先到寄宫；然后整盘顺时针转
       setMove(0);
       for (const p of RING) place(chips['tian' + p], p, 'di', true);
       place(chips.tian5, 5, 'diCenter', true); place(chips.qin, 5, 'star', true);
       void $('chips').offsetWidth; setMove(500);
       later(200, () => { for (const p of RING) place(chips['tian' + p], p, 'tian', true); });
-      later(900, () => { hl(2); place(chips.qin, 2, 'qin', true); place(chips.tian5, 2, 'tian2', true); });
+      later(900, () => { const J = C.steps.ju.ji; hl(J); place(chips.qin, J, 'qin', true); place(chips.tian5, J, 'tian2', true); });
       later(1900, () => { cellsAll().forEach((c) => c.classList.remove('hl')); hl(S.tian.target); $('cell' + S.tian.target).classList.add('pulse'); setMove(360); setEase('linear'); });
       const n = S.tian.shift;
       for (let i = 1; i <= n; i++) later(2300 + 360 * (i - 1), () => setStars(i, true));
@@ -483,6 +538,16 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   // ── 旁白 ──
   const P = (p) => `${QM.PALACE[p].gua}${p}宫`;
   const cn = (n) => '〇一二三四五六七八九'[n];
+  function yuanExplain() {
+    const S = C.steps, J = S.ju;
+    if (J.method === 'zhirun') {
+      const st = { 超神: `符头比节气早到 ${J.offset} 天，为<b>超神</b>，提前用${J.juTerm}的局`, 接气: `节气比符头早到 ${-J.offset} 天，为<b>接气</b>，符头到后才换${J.juTerm}的局`, 正授: '符头与节气同日，为<b>正授</b>', 置闰: `芒种、大雪之后超神超过九天，<b>置闰</b>，重复${J.juTerm}三元` }[J.status];
+      return `置闰法：本元上元符头为 ${J.head} 日（${J.headDate}），${st}。今日距符头第 ${['一至五', '六至十', '十一至十五'][['上元', '中元', '下元'].indexOf(J.yuan)]} 天，为<b>${J.yuan}</b>。`;
+    }
+    if (J.method === 'maoshan') return `茅山法：${S.pillars.term}交节后第 ${Math.floor(J.days) + 1} 天，每五天一元，为<b>${J.yuan}</b>。`;
+    return `拆补法：日柱 ${S.pillars.day} 往前 ${J.back} 天到最近的甲/己日，符头为 <b>${J.futou}</b>，地支“${J.futou[1]}”属${{ 上元: '子午卯酉', 中元: '寅申巳亥', 下元: '辰戌丑未' }[J.yuan]}，所以是<b>${J.yuan}</b>。`;
+  }
+
   function explain(k) {
     const S = C.steps, sm = C.summary;
     const h = (no, t) => `<h2><span class="no">${no + 1}/8</span>${t}</h2>`;
@@ -491,30 +556,31 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     if (k === 0) html = h(0, '四柱与节气') + `
       <div class="kv"><div><span>年柱</span><b>${S.pillars.year}</b></div><div><span>月柱</span><b>${S.pillars.month}</b></div><div><span>日柱</span><b>${S.pillars.day}</b></div><div><span>时柱</span><b>${S.pillars.hour}</b></div></div>
       <p>太阳视黄经 <span class="mono">${S.pillars.sunLon.toFixed(3)}°</span>，正处在<b>${S.pillars.term}</b>（<span class="mono">${S.pillars.termTime}</span> 交节），下一个节气是${S.pillars.nextTerm}（<span class="mono">${S.pillars.nextTermTime}</span>）。</p>
-      <p class="rule">年柱以立春换，月柱以“节”换（每 30° 黄经一个月），日柱由儒略日数对 60 取余，${S.pillars.dayShift ? '本时刻在 23 点后，日柱已算作次日，' : ''}时柱用五鼠遁从日干推出。</p>`;
+      ${C.opts.solar ? `<p>真太阳时 <span class="mono">${S.pillars.clock}</span>：东经 ${C.opts.lon}° 经度差 ${((C.opts.lon - 120) * 4).toFixed(1)} 分，均时差 ${S.pillars.eot.toFixed(1)} 分。日柱、时柱按真太阳时取。</p>` : ''}
+      <p class="rule">年柱以立春换，月柱以“节”换（每 30° 黄经一个月），日柱由儒略日数对 60 取余（${C.opts.dayChange === 23 ? '23 点换日' : '0 点换日'}${S.pillars.dayShift ? '，本时刻已过 23 点，日柱算作次日' : ''}），时柱用五鼠遁从日干推出。</p>`;
     if (k === 1) html = h(1, '阴阳遁与局数') + `
-      <p>${S.pillars.term}在${S.ju.yang ? '冬至之后、夏至之前，用<b>阳遁</b>' : '夏至之后、冬至之前，用<b>阴遁</b>'}。</p>
-      <p>拆补法定三元：日柱 ${S.pillars.day} 往前 ${S.ju.back} 天到最近的甲/己日，符头为 <b>${S.ju.futou}</b>，地支“${S.ju.futou[1]}”属${{ 上元: '子午卯酉', 中元: '寅申巳亥', 下元: '辰戌丑未' }[S.ju.yuan]}，所以是<b>${S.ju.yuan}</b>。</p>
+      <p>${yuanExplain()}</p>
+      <p>用局节气${S.ju.juTerm}在${S.ju.yang ? '冬至之后、夏至之前，用<b>阳遁</b>' : '夏至之后、冬至之前，用<b>阴遁</b>'}。</p>
       <div class="yuan">${['上元', '中元', '下元'].map((y, i) => `<span class="${y === S.ju.yuan ? 'on' : ''}">${y} ${S.ju.tableRow[i]}局</span>`).join('')}</div>
-      <p>查${S.pillars.term}一行得 <b>${S.ju.dun}${cn(S.ju.ju)}局</b>，地盘从${P(S.ju.ju)}起。</p>`;
+      <p>查${S.ju.juTerm}一行得 <b>${S.ju.dun}${cn(S.ju.ju)}局</b>，地盘从${P(S.ju.ju)}起。</p>`;
     if (k === 2) html = h(2, '布地盘三奇六仪') + `
       <p>按“戊己庚辛壬癸丁丙乙”的顺序，从${P(S.ju.ju)}放第一个“戊”，${S.ju.yang ? '阳遁按宫数 1→9 顺飞' : '阴遁按宫数 9→1 逆飞'}，九个干填满九宫。</p>
       <p class="mono">${S.di.order.map((o) => o.palace + o.stem).join(' → ')}</p>
       <p class="rule">六仪是六个旬首“甲”的藏身之处：甲子戊、甲戌己、甲申庚、甲午辛、甲辰壬、甲寅癸。乙丙丁是三奇。</p>`;
     if (k === 3) html = h(3, '旬首、值符、值使') + `
       <p>时柱 ${S.pillars.hour} 在 <b>${S.xun.xunName}</b> 旬，甲遁于六仪“${S.xun.xunYi}”。地盘上“${S.xun.xunYi}”在${P(S.xun.xunPalace)}。</p>
-      <p>该宫原本的星是<b>值符 · ${S.xun.zhifuStar}</b>，原本的门是<b>值使 · ${S.xun.zhishiDoor}</b>（加下划线的两个）。${S.xun.xunPalace === 5 ? '旬首落中五宫，值符取天禽，值使取寄宫坤二的死门。' : ''}</p>
+      <p>该宫原本的星是<b>值符 · ${S.xun.zhifuStar}</b>，原本的门是<b>值使 · ${S.xun.zhishiDoor}</b>（加下划线的两个）。${S.xun.xunPalace === 5 ? `旬首落中五宫，值符取天禽，值使取寄宫${P(S.ju.ji)}的${S.xun.zhishiDoor}。` : ''}</p>
       <p class="rule">此刻九星、八门都在本宫：蓬1 芮2 冲3 辅4 禽5 心6 柱7 任8 英9；休1 死2 伤3 杜4 开6 惊7 生8 景9。</p>`;
     if (k === 4) html = h(4, '转天盘') + `
-      <p>时干是“${S.tian.hourGan}”${S.tian.hourGan === '甲' ? `，甲不入盘，用旬首六仪“${S.tian.leadStem}”代替` : ''}，它在地盘${P(S.tian.targetRaw)}${S.tian.targetRaw === 5 ? '，中五寄坤二' : ''}。值符${S.xun.zhifuStar}随之转到<b>${P(S.tian.target)}</b>。</p>
-      <p>九星沿外圈顺时针整体转动 <b>${S.tian.shift}</b> 格，每颗星带着原宫的地盘干同行，这就是天盘干。天禽随天芮。</p>
+      <p>时干是“${S.tian.hourGan}”${S.tian.hourGan === '甲' ? `，甲不入盘，用旬首六仪“${S.tian.leadStem}”代替` : ''}，它在地盘${P(S.tian.targetRaw)}${S.tian.targetRaw === 5 ? '，中五寄' + P(S.ju.ji) : ''}。值符${S.xun.zhifuStar}随之转到<b>${P(S.tian.target)}</b>。</p>
+      <p>九星沿外圈顺时针整体转动 <b>${S.tian.shift}</b> 格，每颗星带着原宫的地盘干同行，这就是天盘干。天禽寄${P(S.ju.ji)}，随${QM.STAR_HOME[S.ju.ji]}同行。</p>
       ${S.tian.shift === 0 ? '<p><b>九星未动，是伏吟盘。</b></p>' : S.tian.shift === 4 ? '<p><b>九星转到对宫，是反吟盘。</b></p>' : ''}`;
     if (k === 5) html = h(5, '转人盘') + `
       <p>值使${S.xun.zhishiDoor}从${P(S.xun.xunPalace)}出发，由旬首地支“${S.xun.xunName[1]}”数到时支“${S.pillars.hour[1]}”共 <b>${S.door.stepsN}</b> 步，${S.ju.yang ? '阳遁顺' : '阴遁逆'}宫而行：</p>
-      <p class="mono">${S.door.path.join(' → ')}${S.door.doorTargetRaw === 5 ? '（中五寄坤二）' : ''}</p>
+      <p class="mono">${S.door.path.join(' → ')}${S.door.doorTargetRaw === 5 ? '（中五寄' + P(S.ju.ji) + '）' : ''}</p>
       <p>值使落<b>${P(S.door.doorTarget)}</b>，其余七门随之转动。</p>`;
     if (k === 6) html = h(6, '排八神') + `
-      <p>八神之首“值符”跟随值符星落${P(S.god.start)}，然后${S.god.clockwise ? '阳遁顺时针' : '阴遁逆时针'}依次排：值符、腾蛇、太阴、六合、白虎、玄武、九地、九天。</p>`;
+      <p>八神之首“值符”跟随值符星落${P(S.god.start)}，然后${S.god.clockwise ? '阳遁顺时针' : '阴遁逆时针'}依次排：${S.god.names.join('、')}。</p>`;
     if (k === 7) html = h(7, '空亡、驿马与格局') + `
       <p>旬空 ${sm.kong.join('、')}，落${sm.kongPalaces.map(P).join('、')}；驿马在${sm.ma}，落${P(sm.maPalace)}。</p>
       ${C.patterns.length ? `<ul class="pat">${C.patterns.map((pt) => `<li><span class="tag ${pt.kind}">${pt.kind}</span><span><b>${pt.name}</b> ${pt.palace ? P(pt.palace) + '：' : ''}${pt.why}</span></li>`).join('')}</ul>` : '<p>未识别到常见特殊格局。</p>'}`;
@@ -526,10 +592,10 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     const step = k >= 0 ? `<span class="step">${k + 1} / 8 · ${STAGES[k]}</span>` : '<span class="step">起局</span>';
     const t = [
       `四柱 <b>${S.pillars.year} ${S.pillars.month} ${S.pillars.day} ${S.pillars.hour}</b>，太阳行至${S.pillars.term}`,
-      `${S.pillars.term}属${S.ju.dun.slice(0, 1)}遁，符头${S.ju.futou}为${S.ju.yuan}，得 <b>${S.ju.dun}${cn(S.ju.ju)}局</b>`,
+      `${S.ju.method === 'zhirun' ? S.ju.juTerm + '（' + S.ju.status + '）' : S.ju.method === 'maoshan' ? '交节第 ' + (Math.floor(S.ju.days) + 1) + ' 天' : '符头' + S.ju.futou}为${S.ju.yuan}，得 <b>${S.ju.dun}${cn(S.ju.ju)}局</b>`,
       `三奇六仪自${P(S.ju.ju)}起，${S.ju.yang ? '顺' : '逆'}布九宫`,
       `时在${S.xun.xunName}旬，甲遁于${S.xun.xunYi}：值符 <b>${S.xun.zhifuStar}</b>，值使 <b>${S.xun.zhishiDoor}</b>`,
-      `天盘干浮起，天禽寄坤；值符随时干${S.tian.hourGan === '甲' ? S.tian.leadStem : S.tian.hourGan}转至 <b>${P(S.tian.target)}</b>`,
+      `天盘干浮起，天禽寄${QM.PALACE[S.ju.ji].gua}；值符随时干${S.tian.hourGan === '甲' ? S.tian.leadStem : S.tian.hourGan}转至 <b>${P(S.tian.target)}</b>`,
       `值使${S.xun.zhishiDoor}行 ${S.door.stepsN} 步，落 <b>${P(S.door.doorTarget)}</b>，八门随转`,
       `八神随值符，自${P(S.god.start)}${S.god.clockwise ? '顺' : '逆'}排八宫`,
       `旬空${sm.kong.join('')}，驿马在${sm.ma}${C.patterns.length ? `，见${C.patterns.length}处格局` : ''}`,
@@ -635,12 +701,40 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     const d = new Date(Date.now() + 8 * 3600e3);
     return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
   }
+  // ── 排盘设置（记在本机浏览器里）──
+  const OPT_KEY = 'qimen-opts-v1';
+  function readOpts() {
+    const lon = parseFloat($('o-lon').value);
+    return { yuan: $('o-yuan').value, ji: $('o-ji').value, gods: $('o-gods').value, dayChange: +$('o-day').value, solar: $('o-solar').checked, lon: isFinite(lon) ? lon : 120 };
+  }
+  function optSummary(o) {
+    const T = QM.OPT_TEXT;
+    return [T.yuan[o.yuan], o.ji === 'kun' ? '寄坤' : '阳艮阴坤', o.gods === 'huxuan' ? '虎玄' : '勾朱', o.dayChange + ' 点换日', o.solar ? '真太阳时 ' + o.lon + '°' : '北京时间'].join(' · ');
+  }
+  function syncOpts() {
+    const o = readOpts();
+    $('optSum').textContent = optSummary(o);
+    $('sub').textContent = '时家转盘 · ' + QM.OPT_TEXT.yuan[o.yuan];
+    $('o-lon').disabled = !o.solar;
+    try { localStorage.setItem(OPT_KEY, JSON.stringify(o)); } catch (e) { /* 无痕模式等 */ }
+  }
+  (function loadOpts() {
+    let o = null;
+    try { o = JSON.parse(localStorage.getItem(OPT_KEY) || 'null'); } catch (e) { o = null; }
+    o = Object.assign({}, QM.DEFAULT_OPTS, o || {});
+    $('o-yuan').value = o.yuan; $('o-ji').value = o.ji; $('o-gods').value = o.gods; $('o-day').value = String(o.dayChange);
+    $('o-solar').checked = !!o.solar; $('o-lon').value = o.lon;
+    syncOpts();
+  })();
+  for (const id of ['o-yuan', 'o-ji', 'o-gods', 'o-day', 'o-solar', 'o-lon']) $(id).addEventListener('change', syncOpts);
+
   $('form').addEventListener('submit', (e) => {
     e.preventDefault();
     const v = $('dt').value; if (!v) return;
     const [ds, ts] = v.split('T'); const [y, m, d] = ds.split('-').map(Number); const [hh, mm] = ts.split(':').map(Number);
     question = $('q').value.trim();
-    C = QM.chart(y, m, d, hh, mm);
+    C = QM.chart(y, m, d, hh, mm, readOpts());
+    $('foot').textContent = `本盘设置：${optSummary(C.opts)}。节气用截断 VSOP87 自行计算，误差在 1 分钟以内；真太阳时的均时差用近似式，误差约半分钟。各门派在定局、寄宫、格局判定上有差异，以上设置可在起局页调整。`;
     build();
     $('out').textContent = QM.toText(C, question);
     ritual();

@@ -165,8 +165,35 @@
   const pad = (n) => String(n).padStart(2, '0');
   const fmtDT = (o) => `${o.y}-${pad(o.m)}-${pad(o.d)} ${pad(o.h)}:${pad(o.mi)}`;
 
+  // ───────────────────────── 排盘选项 ─────────────────────────
+  const DEFAULT_OPTS = {
+    yuan: 'chaibu',   // 定局：chaibu 拆补法 / zhirun 置闰法 / maoshan 茅山法
+    ji: 'kun',        // 中五寄宫：kun 恒寄坤二 / genkun 阳遁寄艮八、阴遁寄坤二
+    gods: 'huxuan',   // 八神：huxuan 白虎玄武 / gouque 勾陈朱雀
+    dayChange: 23,    // 换日：23 子初换日 / 0 子正换日
+    solar: false,     // 是否用真太阳时定日柱、时柱
+    lon: 120,         // 出生地或起局地经度（东经，度）
+  };
+  const OPT_TEXT = {
+    yuan: { chaibu: '拆补法', zhirun: '置闰法', maoshan: '茅山法' },
+    ji: { kun: '中五寄坤二', genkun: '中五阳遁寄艮八、阴遁寄坤二' },
+    gods: { huxuan: '八神用白虎玄武', gouque: '八神用勾陈朱雀' },
+    dayChange: { 23: '23 点换日', 0: '0 点换日' },
+  };
+  const withDefaults = (o) => Object.assign({}, DEFAULT_OPTS, o || {});
+
+  // 均时差（分钟），NOAA 近似式，误差约半分钟
+  function equationOfTime(y, m, d, h) {
+    const doy = (Date.UTC(y, m - 1, d) - Date.UTC(y, 0, 1)) / 864e5 + 1;
+    const g = 2 * Math.PI / 365 * (doy - 1 + (h - 12) / 24);
+    return 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+  }
+  const civilJdn = (y, m, d) => Math.floor(Date.UTC(y, m - 1, d) / 86400e3 + 2440587.5 + 0.5);
+
   // ───────────────────────── 四柱 ─────────────────────────
-  function fourPillars(y, m, d, h, mi) {
+  // 年、月柱按真实时刻（节气）定；日、时柱按“钟点”定，钟点可选真太阳时
+  function fourPillars(y, m, d, h, mi, opts) {
+    const o = withDefaults(opts);
     const jd = jdFromBeijing(y, m, d, h, mi);
     const lon = sunLonAtJd(jd);
 
@@ -181,23 +208,69 @@
     const monthZhi = mod(2 + mOrder, 12);
     const monthIdx = sixtyIndex(monthGan, monthZhi);
 
-    // 日柱：23 点后算次日（早晚子时不分）
-    const civilNoonJdn = Math.floor(Date.UTC(y, m - 1, d) / 86400e3 + 2440587.5 + 0.5);
-    const dayShift = h >= 23 ? 1 : 0;
-    const dayIdx = mod(civilNoonJdn + dayShift + 49, 60);
+    // 钟点：北京时间，或经度与均时差修正后的真太阳时
+    let offsetMin = 0, eot = 0;
+    if (o.solar) { eot = equationOfTime(y, m, d, h); offsetMin = (o.lon - 120) * 4 + eot; }
+    const ck = new Date(Date.UTC(y, m - 1, d, h, mi) + Math.round(offsetMin * 60e3));
+    const clock = { y: ck.getUTCFullYear(), m: ck.getUTCMonth() + 1, d: ck.getUTCDate(), h: ck.getUTCHours(), mi: ck.getUTCMinutes() };
+
+    // 日柱：子初（23 点）或子正（0 点）换日
+    const dayShift = o.dayChange === 23 && clock.h >= 23 ? 1 : 0;
+    const dayNum = civilJdn(clock.y, clock.m, clock.d) + dayShift;
+    const dayIdx = mod(dayNum + 49, 60);
 
     // 时柱：五鼠遁
-    const hourZhi = Math.floor((h + 1) / 2) % 12;
+    const hourZhi = Math.floor((clock.h + 1) / 2) % 12;
     const hourGan = mod((dayIdx % 10 % 5) * 2 + hourZhi, 10);
     const hourIdx = sixtyIndex(hourGan, hourZhi);
 
-    return { jd, lon, yearIdx, monthIdx, dayIdx, hourIdx, dayShift };
+    return { jd, lon, yearIdx, monthIdx, dayIdx, hourIdx, dayShift, dayNum, clock, offsetMin, eot };
   }
+
+  // ───────────────────────── 置闰法 ─────────────────────────
+  // 每 15 天一个符头（甲子、己卯、甲午、己酉日）开一个节气的上元。
+  // 符头早于节气为超神，晚于节气为接气；芒种、大雪之后超神超过 9 天，则重复该节气三元（置闰）。
+  const SHANGYUAN_HEAD = [0, 15, 30, 45];
+  function termDayNum(idx, guessJd, o) {
+    const jd = solveTerm(idx * 15, guessJd);
+    const t = beijingFromJd(jd);
+    return { jd, day: civilJdn(t.y, t.m, t.d) + (o.dayChange === 23 && t.h >= 23 ? 1 : 0) };
+  }
+  function zhirun(dayNum, o) {
+    // 从约三年前的冬至起，逐个符头往后推
+    const approxYear = new Date((dayNum - 2440587.5) * 864e5).getUTCFullYear();
+    let tIdx = 18; // 冬至
+    let term = termDayNum(18, jdFromBeijing(approxYear - 3, 12, 21), o);
+    let S = term.day;
+    for (let k = -7; k <= 7; k++) if (SHANGYUAN_HEAD.includes(mod(term.day + k + 49, 60))) { S = term.day + k; break; } // 15 天内恰有一个上元符头
+    let leap = false;
+    let guard = 0;
+    while (S + 15 <= dayNum && guard++ < 400) {
+      const nIdx = (tIdx + 1) % 24;
+      const next = termDayNum(nIdx, term.jd + 15.2, o);
+      const overshoot = next.day - (S + 15); // 下一个符头相对下一个节气提前的天数（超神）
+      if ((JIEQI[tIdx] === '芒种' || JIEQI[tIdx] === '大雪') && overshoot > 9 && !leap) {
+        leap = true; // 重复本节气三元
+      } else {
+        tIdx = nIdx; term = next; leap = false;
+      }
+      S += 15;
+    }
+    const offset = term.day - S; // >0 超神（符头先到），<0 接气（节气先到），0 正授
+    return {
+      term: JIEQI[tIdx], termJd: term.jd, leap, offset, headDay: S,
+      yuanNo: Math.min(2, Math.floor((dayNum - S) / 5)),
+      status: leap ? '置闰' : offset > 0 ? '超神' : offset < 0 ? '接气' : '正授',
+    };
+  }
+
   function sixtyIndex(g, z) { for (let i = 0; i < 60; i++) if (i % 10 === g && i % 12 === z) return i; return -1; }
 
   // ───────────────────────── 排盘主函数 ─────────────────────────
-  function chart(y, m, d, h, mi) {
-    const P = fourPillars(y, m, d, h, mi);
+  function chart(y, m, d, h, mi, opts) {
+    const o = withDefaults(opts);
+    const P = fourPillars(y, m, d, h, mi, o);
+    const GODS_USED = o.gods === 'gouque' ? ['值符', '腾蛇', '太阴', '六合', '勾陈', '朱雀', '九地', '九天'] : GODS;
     const steps = {};
 
     // ① 四柱与节气
@@ -208,7 +281,7 @@
     const nextJd = solveTerm(nextIdx * 15, termJd + 15.2);
     steps.pillars = {
       year: ganzhi(P.yearIdx), month: ganzhi(P.monthIdx), day: ganzhi(P.dayIdx), hour: ganzhi(P.hourIdx),
-      dayShift: P.dayShift, sunLon: P.lon,
+      dayShift: P.dayShift, sunLon: P.lon, clock: fmtDT(P.clock), offsetMin: P.offsetMin, eot: P.eot,
       term: termName, termTime: fmtDT(beijingFromJd(termJd)),
       nextTerm: JIEQI[nextIdx], nextTermTime: fmtDT(beijingFromJd(nextJd)),
     };
@@ -218,12 +291,24 @@
     const back = dayGan % 5; // 往前几天到甲/己日
     const futouIdx = mod(P.dayIdx - back, 60);
     const futouZhi = futouIdx % 12;
-    const yuanNo = [0, 2, 1][futouZhi % 3]; // 子午卯酉→上(0) 寅申巳亥→中(1) 辰戌丑未→下(2)
+    let yuanNo, juTerm = termName, extra = {};
+    if (o.yuan === 'zhirun') {
+      const z = zhirun(P.dayNum, o);
+      yuanNo = z.yuanNo; juTerm = z.term;
+      extra = { status: z.status, offset: z.offset, leap: z.leap, head: ganzhi(mod(z.headDay + 49, 60)), headDate: fmtDT(beijingFromJd(z.headDay)).slice(0, 10) };
+    } else if (o.yuan === 'maoshan') {
+      const days = P.jd - termJd;
+      yuanNo = Math.min(2, Math.floor(days / 5));
+      extra = { days };
+    } else {
+      yuanNo = [0, 2, 1][futouZhi % 3]; // 子午卯酉→上(0) 寅申巳亥→中(1) 辰戌丑未→下(2)
+    }
     const yuanName = ['上元', '中元', '下元'][yuanNo];
-    const [yy, ...nums] = JU_TABLE[termName];
+    const [yy, ...nums] = JU_TABLE[juTerm];
     const yang = yy === '阳';
     const ju = nums[yuanNo];
-    steps.ju = { yang, dun: yang ? '阳遁' : '阴遁', yuan: yuanName, ju, futou: ganzhi(futouIdx), back, tableRow: nums };
+    const JI = o.ji === 'genkun' && yang ? 8 : 2; // 中五寄宫
+    steps.ju = { yang, dun: yang ? '阳遁' : '阴遁', yuan: yuanName, ju, futou: ganzhi(futouIdx), back, tableRow: nums, method: o.yuan, juTerm, ji: JI, ...extra };
 
     // ③ 地盘：三奇六仪从局数宫起，阳顺阴逆飞布九宫
     const di = {}; const diOrder = [];
@@ -240,7 +325,7 @@
     const xunYi = XUN_YI[xun];
     const xunPalace = stemPalace(xunYi);
     const zhifuStar = STAR_HOME[xunPalace]; // 落中五则为天禽
-    const zhishiDoor = DOOR_HOME[xunPalace === 5 ? 2 : xunPalace];
+    const zhishiDoor = DOOR_HOME[xunPalace === 5 ? JI : xunPalace];
     const kongZhi = [ZHI[mod(xun * 10 + 10, 12)], ZHI[mod(xun * 10 + 11, 12)]];
     steps.xun = { xunName, xunYi, xunPalace, zhifuStar, zhishiDoor, kong: kongZhi };
 
@@ -249,16 +334,16 @@
     const leadStem = hourGanCh === '甲' ? xunYi : hourGanCh;
     let target = stemPalace(leadStem);
     const targetRaw = target;
-    if (target === 5) target = 2;
-    const startP = xunPalace === 5 ? 2 : xunPalace;
+    if (target === 5) target = JI;
+    const startP = xunPalace === 5 ? JI : xunPalace;
     const shift = mod(ringIdx(target) - ringIdx(startP), 8);
     const tian = {}; // palace -> { stars:[], stems:[] }
     for (let k = 0; k < 8; k++) {
       const from = RING[k], to = RING[(k + shift) % 8];
       tian[to] = { stars: [STAR_HOME[from]], stems: [di[from]], from };
-      if (from === 2) { tian[to].stars.push('天禽'); if (di[5] !== di[2]) tian[to].stems.push(di[5]); }
+      if (from === JI) { tian[to].stars.push('天禽'); tian[to].stems.push(di[5]); }
     }
-    steps.tian = { hourGan: hourGanCh, leadStem, target, targetRaw, startP, shift };
+    steps.tian = { hourGan: hourGanCh, leadStem, target, targetRaw, startP, shift, ji: JI };
 
     // ⑥ 人盘：值使从旬首宫按时辰数飞宫，八门沿环转动
     const stepsN = mod(P.hourIdx % 12 - (xun * 10) % 12, 12);
@@ -266,8 +351,8 @@
     for (let i = 1; i <= stepsN; i++) path.push(yang ? mod(xunPalace - 1 + i, 9) + 1 : mod(xunPalace - 1 - i, 9) + 1);
     let doorTarget = path[path.length - 1];
     const doorTargetRaw = doorTarget;
-    if (doorTarget === 5) doorTarget = 2;
-    const doorStart = xunPalace === 5 ? 2 : xunPalace;
+    if (doorTarget === 5) doorTarget = JI;
+    const doorStart = xunPalace === 5 ? JI : xunPalace;
     const doorShift = mod(ringIdx(doorTarget) - ringIdx(doorStart), 8);
     const door = {};
     for (let k = 0; k < 8; k++) door[RING[(k + doorShift) % 8]] = DOOR_HOME[RING[k]];
@@ -276,8 +361,8 @@
     // ⑦ 神盘：值符（神）随值符星落宫，阳顺阴逆
     const god = {};
     const gi = ringIdx(target);
-    for (let k = 0; k < 8; k++) god[RING[mod(gi + (yang ? k : -k), 8)]] = GODS[k];
-    steps.god = { start: target, clockwise: yang };
+    for (let k = 0; k < 8; k++) god[RING[mod(gi + (yang ? k : -k), 8)]] = GODS_USED[k];
+    steps.god = { start: target, clockwise: yang, names: GODS_USED };
 
     // ⑧ 空亡、驿马、格局
     const hourZhiCh = ZHI[P.hourIdx % 12];
@@ -328,7 +413,7 @@
 
     return {
       input: { y, m, d, h, mi, text: `${y}-${pad(m)}-${pad(d)} ${pad(h)}:${pad(mi)}` },
-      steps, palaces, patterns,
+      opts: o, steps, palaces, patterns,
       summary: {
         zhifuStar, zhishiDoor, zhifuPalace: target, zhishiPalace: doorTarget,
         ma: maZhi, maPalace, kong: kongZhi, kongPalaces,
@@ -339,13 +424,16 @@
   // ───────────────────────── 生成给 AI 的文字 ─────────────────────────
   const ORDER_TEXT = [4, 9, 2, 3, 5, 7, 8, 1, 6];
   function toText(c, question) {
-    const S = c.steps, sm = c.summary;
+    const S = c.steps, sm = c.summary, o = c.opts;
     const L = [];
-    L.push('【奇门遁甲排盘】时家奇门 · 转盘 · 拆补法 · 中五寄坤二');
-    L.push(`起局时间：${c.input.text}（北京时间，未做真太阳时校正）`);
+    L.push(`【奇门遁甲排盘】时家奇门 · 转盘 · ${OPT_TEXT.yuan[o.yuan]} · ${OPT_TEXT.ji[o.ji]} · ${OPT_TEXT.gods[o.gods]} · ${OPT_TEXT.dayChange[o.dayChange]}`);
+    if (o.solar) L.push(`起局时间：${c.input.text}（北京时间）；真太阳时 ${S.pillars.clock}（东经 ${o.lon}°，经度差 ${((o.lon - 120) * 4).toFixed(1)} 分，均时差 ${S.pillars.eot.toFixed(1)} 分），日柱、时柱按真太阳时`);
+    else L.push(`起局时间：${c.input.text}（北京时间，未做真太阳时校正）`);
     L.push(`四柱：${S.pillars.year}年 ${S.pillars.month}月 ${S.pillars.day}日 ${S.pillars.hour}时`);
     L.push(`节气：${S.pillars.term}（交节 ${S.pillars.termTime}），下一节气 ${S.pillars.nextTerm}（${S.pillars.nextTermTime}）`);
-    L.push(`定局：${S.ju.dun}${'〇一二三四五六七八九'[S.ju.ju]}局，${S.ju.yuan}（符头 ${S.ju.futou}）`);
+    if (o.yuan === 'zhirun') L.push(`定局：${S.ju.dun}${'〇一二三四五六七八九'[S.ju.ju]}局，${S.ju.juTerm}${S.ju.yuan}（置闰法，${S.ju.status}${S.ju.offset && !S.ju.leap ? ' ' + Math.abs(S.ju.offset) + ' 天' : ''}，上元符头 ${S.ju.head} 日 ${S.ju.headDate}）`);
+    else if (o.yuan === 'maoshan') L.push(`定局：${S.ju.dun}${'〇一二三四五六七八九'[S.ju.ju]}局，${S.ju.yuan}（茅山法，交节后第 ${Math.floor(S.ju.days) + 1} 天）`);
+    else L.push(`定局：${S.ju.dun}${'〇一二三四五六七八九'[S.ju.ju]}局，${S.ju.yuan}（拆补法，符头 ${S.ju.futou}）`);
     L.push(`旬首：${S.xun.xunName}（遁于${S.xun.xunYi}），旬空：${sm.kong.join('')}（落${sm.kongPalaces.map((p) => PALACE[p].gua + p + '宫').join('、')}）`);
     L.push(`值符：${sm.zhifuStar}，加时干${S.tian.hourGan === '甲' ? '（甲时用' + S.tian.leadStem + '）' : S.tian.hourGan}落${PALACE[sm.zhifuPalace].gua}${sm.zhifuPalace}宫`);
     L.push(`值使：${sm.zhishiDoor}，行${S.door.stepsN}步落${PALACE[sm.zhishiPalace].gua}${sm.zhishiPalace}宫`);
@@ -354,7 +442,7 @@
     L.push('九宫盘面（按 上南下北、左东右西 的洛书方位，自左上至右下）：');
     for (const p of ORDER_TEXT) {
       const q = c.palaces[p];
-      if (p === 5) { L.push(`- 中五宫（土）：地盘 ${q.di}（寄坤二宫）`); continue; }
+      if (p === 5) { L.push(`- 中五宫（土）：地盘 ${q.di}（寄${PALACE[S.ju.ji].gua}${S.ju.ji}宫）`); continue; }
       const marks = [q.kong && '旬空', q.ma && '驿马'].filter(Boolean);
       L.push(`- ${q.gua}${p}宫（${q.dir}，${q.wx}）：八神 ${q.god}｜九星 ${q.stars.join('+')}｜天盘 ${q.tianStems.join('')}｜八门 ${q.door}｜地盘 ${q.di}${marks.length ? '｜' + marks.join('、') : ''}`);
     }
@@ -375,6 +463,6 @@
 
   return {
     GAN, ZHI, JIEQI, PALACE, RING, STAR_HOME, DOOR_HOME, GODS, GAN_WX,
-    chart, toText, sunApparentLon, solveTerm, jdFromBeijing, beijingFromJd, fmtDT, deltaT, fourPillars, ganzhi,
+    chart, toText, DEFAULT_OPTS, OPT_TEXT, sunApparentLon, solveTerm, jdFromBeijing, beijingFromJd, fmtDT, deltaT, fourPillars, ganzhi,
   };
 });
