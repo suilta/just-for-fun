@@ -463,6 +463,6 @@
 
   return {
     GAN, ZHI, JIEQI, PALACE, RING, STAR_HOME, DOOR_HOME, GODS, GAN_WX,
-    chart, toText, DEFAULT_OPTS, OPT_TEXT, sunApparentLon, solveTerm, jdFromBeijing, beijingFromJd, fmtDT, deltaT, fourPillars, ganzhi,
+    chart, toText, DEFAULT_OPTS, OPT_TEXT, equationOfTime, sunApparentLon, solveTerm, jdFromBeijing, beijingFromJd, fmtDT, deltaT, fourPillars, ganzhi,
   };
 });

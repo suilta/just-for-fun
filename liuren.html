@@ -73,6 +73,19 @@ button.primary:hover:not(:disabled) { color: var(--surface); filter: brightness(
 .altar .field { display: grid; gap: 6px; }
 #go { white-space: nowrap; justify-self: center; margin-top: 8px; padding: 12px 44px; font-size: 18px; letter-spacing: .5em; font-family: var(--f-display); border-radius: 999px; }
 #go span { margin-right: -.5em; }
+.settings { position: relative; width: 100%; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.settings summary { cursor: pointer; padding: 10px 12px; font-size: 13px; color: var(--muted); letter-spacing: .08em; list-style: none; display: flex; justify-content: space-between; gap: 8px; }
+.settings summary::-webkit-details-marker { display: none; }
+.settings summary::after { content: '展开'; color: var(--accent); white-space: nowrap; }
+.settings[open] summary::after { content: '收起'; }
+.settings summary > span:first-child { white-space: nowrap; }
+.settings .sum { color: var(--ink); text-align: right; min-width: 0; }
+.opts { display: grid; gap: 12px; padding: 4px 12px 14px; }
+.opt { display: grid; gap: 4px; }
+.opt select, .opt input[type=number] { font: inherit; color: var(--ink); background: var(--cell); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; width: 100%; }
+.opt .note { font-size: 12px; color: var(--muted); margin: 0; }
+.opt .inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.opt .inline input[type=number] { width: 7em; }
 .altar .hint { position: relative; font-size: 12.5px; color: var(--muted); margin: 0; }
 
 /* 第二、三幕 */
@@ -193,6 +206,27 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
         <label class="label" for="q">所问之事</label>
         <textarea id="q" rows="2" placeholder="心中默念所问，写在这里。例如：这次合作能否谈成"></textarea>
       </div>
+      <details class="settings" id="settings">
+        <summary><span>起课设置</span><span class="sum" id="optSum"></span></summary>
+        <div class="opts">
+          <div class="opt">
+            <label class="label" for="o-day">换日</label>
+            <select id="o-day">
+              <option value="23">23 点换日（子初换日，默认）</option>
+              <option value="0">0 点换日（子正换日）</option>
+            </select>
+          </div>
+          <div class="opt">
+            <label class="label" for="o-dn">昼夜贵人分界</label>
+            <select id="o-dn">
+              <option value="maoshen">卯至申为昼，酉至寅为夜（默认）</option>
+              <option value="sun">按当地日出日落</option>
+            </select>
+            <div class="inline" id="o-geo"><label class="note" for="o-lat">北纬</label><input type="number" id="o-lat" min="0" max="60" step="0.01" value="39.9"><label class="note" for="o-lon">东经</label><input type="number" id="o-lon" min="70" max="140" step="0.01" value="116.4"></div>
+            <p class="note">取传口径固定为：伏吟/返吟 → 贼克 → 比用 → 涉害（《六壬大全》数深浅）→ 八专 → 遥克 → 别责 → 昴星。</p>
+          </div>
+        </div>
+      </details>
       <button type="submit" class="primary" id="go"><span>起课</span></button>
     </form>
     <p class="hint">所问之事会写进课式原文，起完课可以复制给 AI 解读。</p>
@@ -227,7 +261,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     <div class="pane" id="pane-raw">
       <div class="row"><button type="button" id="copy">复制文本</button><span class="small">可以粘贴给任何 AI 解读。</span></div>
       <pre id="out"></pre>
-      <p class="small">月将以中气换将，节气用截断 VSOP87 自行计算。时间按北京时间处理，没有做真太阳时校正。昼夜贵人以卯至申时为昼。九宗门的涉害、别责等细则各家略有出入。</p>
+      <p class="small" id="foot"></p>
     </div>
     <div class="pane" id="pane-process" hidden>
       <ol class="stages" id="stages"></ol>
@@ -523,7 +557,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     if (k === 2) x = h(2, '天盘') + `<p>以月将${zn(P.pillars.jiang)}加在占时${zn(P.pillars.hourZhi)}上，十二支随之顺时针转动 ${P.plate.rot} 格，形成天盘。</p>${P.plate.fuyin ? '<p><b>月将与占时相同，天地盘重合，是伏吟课。</b></p>' : P.plate.fanyin ? '<p><b>天盘与地盘处处对冲，是返吟课。</b></p>' : ''}`;
     if (k === 3) x = h(3, '四课') + `<ul>${C.ke4.map((c) => `<li>第${'一二三四'[c.no - 1]}课：${c.no === 1 ? `日干${c.down}寄${zn(P.ke.jigong)}，` : c.no === 3 ? `日支${c.down}，` : `以上一课上神${c.down}为下，`}其上天盘为 <b>${c.upCh}</b></li>`).join('')}</ul><p class="rule">十干寄宫：甲寅 乙辰 丙戊巳 丁己未 庚申 辛戌 壬亥 癸丑。</p>`;
     if (k === 4) x = h(4, '发三传') + `<p>课体：<b>${P.chuan.method}</b></p><ul>${P.chuan.why.map((w) => `<li>${w}</li>`).join('')}</ul><p>三传：${C.chuan.map((t) => `${t.pos} <b>${t.zhi}</b>`).join('，')}。</p>`;
-    if (k === 5) x = h(5, '十二天将') + `<p>${C.dayGan}日${P.gen.isDay ? '昼' : '夜'}占，贵人在${zn(P.gen.gui)}。天盘${zn(P.gen.gui)}临地盘${zn(P.gen.guiSeat)}，${P.gen.shun ? '在亥至辰之间，顺行' : '在巳至戌之间，逆行'}，依次排贵人、腾蛇、朱雀、六合、勾陈、青龙、天空、白虎、太常、玄武、太阴、天后。</p>`;
+    if (k === 5) x = h(5, '十二天将') + `<p>${C.dayGan}日${P.gen.isDay ? '昼' : '夜'}占（${C.opts.dayNight === 'sun' ? '按当地日出日落' : '卯至申为昼'}），贵人在${zn(P.gen.gui)}。天盘${zn(P.gen.gui)}临地盘${zn(P.gen.guiSeat)}，${P.gen.shun ? '在亥至辰之间，顺行' : '在巳至戌之间，逆行'}，依次排贵人、腾蛇、朱雀、六合、勾陈、青龙、天空、白虎、太常、玄武、太阴、天后。</p>`;
     if (k === 6) x = h(6, '遁干、六亲、旬空') + `<p>${C.input.text.slice(0, 10)}为${P.pillars.day}日，在${P.extra.xun}旬，按旬遁出各支天干；旬空${P.extra.kong.map(zn).join('、')}。</p><ul>${C.chuan.map((t) => `<li>${t.pos} ${t.dun}${t.zhi}：${t.general}，${t.qin}${t.kong ? '，旬空' : ''}</li>`).join('')}</ul><p class="rule">六亲以日干${C.dayGan}（${C.dayWx}）为我：生我父母，我生子孙，克我官鬼，我克妻财，同我兄弟。</p>`;
     if (k === 7) x = h(7, '课成') + `<p>${P.pillars.day}日${zn(P.pillars.hourZhi)}时，${zn(P.pillars.jiang)}将，${P.chuan.method}课，三传 ${C.chuan.map((t) => t.zhi).join(' ')}。</p>`;
     $('explain').innerHTML = x;
@@ -599,12 +633,35 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
 
   const pad = (n) => String(n).padStart(2, '0');
   function beijingNow() { const d = new Date(Date.now() + 8 * 3600e3); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`; }
+  // ── 起课设置（记在本机浏览器里）──
+  const OPT_KEY = 'liuren-opts-v1';
+  function readOpts() {
+    const lat = parseFloat($('o-lat').value), lon = parseFloat($('o-lon').value);
+    return { dayChange: +$('o-day').value, dayNight: $('o-dn').value, lat: isFinite(lat) ? lat : 39.9, lon: isFinite(lon) ? lon : 116.4 };
+  }
+  const optSummary = (o) => `${LR.OPT_TEXT.dayChange[o.dayChange]} · ${o.dayNight === 'sun' ? `日出日落（${o.lat}°N ${o.lon}°E）` : '卯申分昼夜'}`;
+  function syncOpts() {
+    const o = readOpts();
+    $('optSum').textContent = optSummary(o);
+    $('o-geo').hidden = o.dayNight !== 'sun';
+    try { localStorage.setItem(OPT_KEY, JSON.stringify(o)); } catch (e) { /* 无痕模式等 */ }
+  }
+  (function loadOpts() {
+    let o = null;
+    try { o = JSON.parse(localStorage.getItem(OPT_KEY) || 'null'); } catch (e) { o = null; }
+    o = Object.assign({}, LR.DEFAULT_OPTS, o || {});
+    $('o-day').value = String(o.dayChange); $('o-dn').value = o.dayNight; $('o-lat').value = o.lat; $('o-lon').value = o.lon;
+    syncOpts();
+  })();
+  for (const id of ['o-day', 'o-dn', 'o-lat', 'o-lon']) $(id).addEventListener('change', syncOpts);
+
   $('form').addEventListener('submit', (e) => {
     e.preventDefault();
     const v = $('dt').value; if (!v) return;
     const [ds, ts] = v.split('T'); const [y, m, d] = ds.split('-').map(Number); const [hh, mm] = ts.split(':').map(Number);
     question = $('q').value.trim();
-    C = LR.cast(y, m, d, hh, mm);
+    C = LR.cast(y, m, d, hh, mm, readOpts());
+    $('foot').textContent = `本课设置：${optSummary(C.opts)}。月将在中气交接的精确时刻换将，节气用截断 VSOP87 自行计算，误差在 1 分钟以内。取传口径：伏吟/返吟 → 贼克 → 比用 → 涉害（《六壬大全》数深浅：起点与本家不计，等深取临孟、临仲，再平阳日干上、阴日支上）→ 八专 → 遥克 → 别责 → 昴星。`;
     build();
     $('out').textContent = LR.toText(C, question);
     ritual();

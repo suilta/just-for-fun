@@ -73,6 +73,19 @@ button.primary:hover:not(:disabled) { color: var(--surface); filter: brightness(
 .altar .field { display: grid; gap: 6px; }
 #go { white-space: nowrap; justify-self: center; margin-top: 8px; padding: 12px 44px; font-size: 18px; letter-spacing: .5em; font-family: var(--f-display); border-radius: 999px; }
 #go span { margin-right: -.5em; }
+.settings { position: relative; width: 100%; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.settings summary { cursor: pointer; padding: 10px 12px; font-size: 13px; color: var(--muted); letter-spacing: .08em; list-style: none; display: flex; justify-content: space-between; gap: 8px; }
+.settings summary::-webkit-details-marker { display: none; }
+.settings summary::after { content: '展开'; color: var(--accent); white-space: nowrap; }
+.settings[open] summary::after { content: '收起'; }
+.settings summary > span:first-child { white-space: nowrap; }
+.settings .sum { color: var(--ink); text-align: right; min-width: 0; }
+.opts { display: grid; gap: 12px; padding: 4px 12px 14px; }
+.opt { display: grid; gap: 4px; }
+.opt select, .opt input[type=number] { font: inherit; color: var(--ink); background: var(--cell); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; width: 100%; }
+.opt .note { font-size: 12px; color: var(--muted); margin: 0; }
+.opt .inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.opt .inline input[type=number] { width: 7em; }
 .altar .hint { position: relative; font-size: 12.5px; color: var(--muted); margin: 0; }
 
 /* 第二、三幕 */
@@ -193,6 +206,27 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
         <label class="label" for="q">所问之事</label>
         <textarea id="q" rows="2" placeholder="心中默念所问，写在这里。例如：这次合作能否谈成"></textarea>
       </div>
+      <details class="settings" id="settings">
+        <summary><span>起课设置</span><span class="sum" id="optSum"></span></summary>
+        <div class="opts">
+          <div class="opt">
+            <label class="label" for="o-day">换日</label>
+            <select id="o-day">
+              <option value="23">23 点换日（子初换日，默认）</option>
+              <option value="0">0 点换日（子正换日）</option>
+            </select>
+          </div>
+          <div class="opt">
+            <label class="label" for="o-dn">昼夜贵人分界</label>
+            <select id="o-dn">
+              <option value="maoshen">卯至申为昼，酉至寅为夜（默认）</option>
+              <option value="sun">按当地日出日落</option>
+            </select>
+            <div class="inline" id="o-geo"><label class="note" for="o-lat">北纬</label><input type="number" id="o-lat" min="0" max="60" step="0.01" value="39.9"><label class="note" for="o-lon">东经</label><input type="number" id="o-lon" min="70" max="140" step="0.01" value="116.4"></div>
+            <p class="note">取传口径固定为：伏吟/返吟 → 贼克 → 比用 → 涉害（《六壬大全》数深浅）→ 八专 → 遥克 → 别责 → 昴星。</p>
+          </div>
+        </div>
+      </details>
       <button type="submit" class="primary" id="go"><span>起课</span></button>
     </form>
     <p class="hint">所问之事会写进课式原文，起完课可以复制给 AI 解读。</p>
@@ -227,7 +261,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     <div class="pane" id="pane-raw">
       <div class="row"><button type="button" id="copy">复制文本</button><span class="small">可以粘贴给任何 AI 解读。</span></div>
       <pre id="out"></pre>
-      <p class="small">月将以中气换将，节气用截断 VSOP87 自行计算。时间按北京时间处理，没有做真太阳时校正。昼夜贵人以卯至申时为昼。九宗门的涉害、别责等细则各家略有出入。</p>
+      <p class="small" id="foot"></p>
     </div>
     <div class="pane" id="pane-process" hidden>
       <ol class="stages" id="stages"></ol>
@@ -703,7 +737,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
 
   return {
     GAN, ZHI, JIEQI, PALACE, RING, STAR_HOME, DOOR_HOME, GODS, GAN_WX,
-    chart, toText, DEFAULT_OPTS, OPT_TEXT, sunApparentLon, solveTerm, jdFromBeijing, beijingFromJd, fmtDT, deltaT, fourPillars, ganzhi,
+    chart, toText, DEFAULT_OPTS, OPT_TEXT, equationOfTime, sunApparentLon, solveTerm, jdFromBeijing, beijingFromJd, fmtDT, deltaT, fourPillars, ganzhi,
   };
 });
 
@@ -739,7 +773,8 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   // 十二天将
   const GENERALS = ['贵人', '腾蛇', '朱雀', '六合', '勾陈', '青龙', '天空', '白虎', '太常', '玄武', '太阴', '天后'];
   // 贵人：日干 → [昼贵, 夜贵]（甲戊庚牛羊，乙己鼠猴乡，丙丁猪鸡位，壬癸兔蛇藏，六辛逢马虎）
-  const GUIREN = { 0: [1, 7], 4: [1, 7], 6: [1, 7], 1: [0, 8], 5: [0, 8], 2: [11, 9], 3: [11, 9], 8: [3, 5], 9: [3, 5], 7: [6, 2] };
+  // 甲戊庚丑昼未夜，乙己子昼申夜，丙丁亥昼酉夜，壬癸巳昼卯夜，辛午昼寅夜（庚不归马虎）
+  const GUIREN = { 0: [1, 7], 4: [1, 7], 6: [1, 7], 1: [0, 8], 5: [0, 8], 2: [11, 9], 3: [11, 9], 8: [5, 3], 9: [5, 3], 7: [6, 2] };
   // 刑
   const XING = { 0: 3, 3: 0, 2: 5, 5: 8, 8: 2, 1: 10, 10: 7, 7: 1, 4: 4, 6: 6, 9: 9, 11: 11 };
   // 驿马（按三合局）
@@ -757,8 +792,25 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     return '妻财';
   }
 
-  function cast(y, m, d, h, mi) {
-    const P = QM.fourPillars(y, m, d, h, mi);
+  // 排盘选项：默认口径锁定为 23 点换日、卯至申为昼
+  const DEFAULT_OPTS = { dayChange: 23, dayNight: 'maoshen', lat: 39.9, lon: 116.4 };
+  const OPT_TEXT = {
+    dayChange: { 23: '23 点换日', 0: '0 点换日' },
+    dayNight: { maoshen: '卯至申为昼', sun: '按当地日出日落分昼夜' },
+  };
+  // 当地是否白天：真太阳时与日出日落时角比较
+  function sunUp(y, m, d, h, mi, lonSun, lat, lonDeg) {
+    const eps = 23.4393 * Math.PI / 180, lam = lonSun * Math.PI / 180, phi = lat * Math.PI / 180;
+    const dec = Math.asin(Math.sin(eps) * Math.sin(lam));
+    const c = (Math.sin(-0.833 * Math.PI / 180) - Math.sin(phi) * Math.sin(dec)) / (Math.cos(phi) * Math.cos(dec));
+    const half = c <= -1 ? 12 : c >= 1 ? 0 : Math.acos(c) * 180 / Math.PI / 15; // 半昼长（小时）
+    const solar = h + mi / 60 + ((lonDeg - 120) * 4 + QM.equationOfTime(y, m, d, h)) / 60;
+    return { day: Math.abs(solar - 12) < half, rise: 12 - half, set: 12 + half, solar };
+  }
+
+  function cast(y, m, d, h, mi, opts) {
+    const o = Object.assign({}, DEFAULT_OPTS, opts || {});
+    const P = QM.fourPillars(y, m, d, h, mi, { dayChange: o.dayChange });
     const steps = {};
     const dayGan = P.dayIdx % 10, dayZhi = P.dayIdx % 12, hourZhi = P.hourIdx % 12;
     const yangDay = dayGan % 2 === 0;
@@ -808,7 +860,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     function sheHai(cands) {
       const scored = cands.map((c) => {
         const from = seat(c.up); let n = 0; const hits = [];
-        for (let i = 0; i < 12; i++) {
+        for (let i = 1; i < 12; i++) { // 起点（所临地盘）与本家都不计
           const p = mod(from + i, 12);
           if (p === c.up) break;
           if (ke(ZHI_WX[p], c.upWx)) { n++; hits.push(ZHI[p]); }
@@ -819,15 +871,13 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
       const max = Math.max(...scored.map((s) => s.n));
       let top = scored.filter((s) => s.n === max);
       why.push('涉害：' + scored.map((s) => `${s.c.upCh}从地盘${ZHI[s.from]}归本家，受克 ${s.n} 次${s.hits.length ? '（' + s.hits.join('') + '）' : ''}`).join('；'));
-      let sub = '涉害';
-      if (top.length > 1) {
-        const m1 = top.filter((s) => MENG.includes(s.from));
-        const m2 = top.filter((s) => ZHONG.includes(s.from));
-        if (m1.length >= 1) { top = m1; sub = '见机'; } else if (m2.length >= 1) { top = m2; sub = '察微'; }
-        if (top.length > 1) { top = [yangDay ? top[0] : top[top.length - 1]]; sub = '缀瑕'; }
-        why.push(`受克深浅相同，${sub === '见机' ? '取临孟神者' : sub === '察微' ? '取临仲神者' : (yangDay ? '阳日取干上一侧' : '阴日取支上一侧')}`);
-      }
-      return { pick: top[0].c, sub };
+      if (top.length === 1) return { up: top[0].c.up, sub: '涉害' };
+      const m1 = top.filter((s) => MENG.includes(s.from));
+      if (m1.length === 1) { why.push('涉害等深，取临孟神者'); return { up: m1[0].c.up, sub: '见机' }; }
+      const m2 = m1.length ? [] : top.filter((s) => ZHONG.includes(s.from));
+      if (m2.length === 1) { why.push('涉害等深，无临孟者，取临仲神者'); return { up: m2[0].c.up, sub: '察微' }; }
+      why.push(`涉害等深且孟仲不能分，${yangDay ? '阳日取干上神' : '阴日取支上神'}`);
+      return { up: yangDay ? k1u : k3u, sub: '缀瑕' };
     }
 
     function zeiKe(label) {
@@ -841,7 +891,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
       why.push(`比用：与日干同为${yangDay ? '阳' : '阴'}者 ${bi.length ? bi.map((c) => c.upCh).join('、') : '无'}`);
       if (bi.length === 1) { method = (label || '') + '比用（知一）'; return bi[0].up; }
       const r = sheHai(bi.length ? bi : cands);
-      method = (label || '') + r.sub; return r.pick.up;
+      method = (label || '') + r.sub; return r.up;
     }
 
     const hasKe = ke4.some((c) => c.zei || c.ke);
@@ -885,14 +935,16 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     steps.chuan = { method, why, list: [chu, zhong, mo] };
 
     // ⑤ 十二天将
-    const isDay = hourZhi >= 3 && hourZhi <= 8;
+    let isDay, sun = null;
+    if (o.dayNight === 'sun') { sun = sunUp(y, m, d, h, mi, P.lon, o.lat, o.lon); isDay = sun.day; }
+    else isDay = hourZhi >= 3 && hourZhi <= 8;
     const gui = GUIREN[dayGan][isDay ? 0 : 1];
     const guiSeat = seat(gui);
     const shun = [11, 0, 1, 2, 3, 4].includes(guiSeat);
     const generalAt = {}; // 地盘位置 -> 天将
     for (let i = 0; i < 12; i++) generalAt[mod(guiSeat + (shun ? i : -i), 12)] = GENERALS[i];
     const generalOfTian = (tz) => generalAt[seat(tz)];
-    steps.gen = { isDay, gui, guiSeat, shun };
+    steps.gen = { isDay, gui, guiSeat, shun, sun };
 
     // ⑥ 遁干、六亲、旬空
     const xunStart = mod(P.dayIdx - (P.dayIdx % 10), 12);
@@ -913,19 +965,22 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
 
     return {
       input: { y, m, d, h, mi, text: `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')} ${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}` },
-      dayGan: GAN[dayGan], dayZhi: ZHI[dayZhi], yangDay, dayWx,
+      opts: o, dayGan: GAN[dayGan], dayZhi: ZHI[dayZhi], yangDay, dayWx,
       steps, plate, ke4, chuan,
     };
   }
 
   function toText(c, question) {
     const S = c.steps, L = [];
-    L.push('【大六壬课式】月将加占时 · 九宗门取三传');
+    const o = c.opts;
+    L.push(`【大六壬课式】月将加占时 · 九宗门取三传 · ${OPT_TEXT.dayChange[o.dayChange]} · ${OPT_TEXT.dayNight[o.dayNight]}`);
+    L.push('取传口径：伏吟/返吟 → 贼克 → 比用 → 涉害（《六壬大全》数深浅，起点与本家不计；等深取临孟、临仲，再平阳日干上、阴日支上）→ 八专 → 遥克 → 别责 → 昴星');
     L.push(`占时：${c.input.text}（北京时间，未做真太阳时校正）`);
     L.push(`四柱：${S.pillars.year}年 ${S.pillars.month}月 ${S.pillars.day}日 ${S.pillars.hour}时`);
     L.push(`月将：${ZHI[S.pillars.jiang]}（${S.pillars.jiangName}，${S.pillars.zhongqi}后），占时：${ZHI[S.pillars.hourZhi]}`);
     L.push(`旬：${S.extra.xun}旬，旬空：${S.extra.kong.map((z) => ZHI[z]).join('')}；日马：${ZHI[S.extra.dayMa]}`);
-    L.push(`贵人：${S.gen.isDay ? '昼' : '夜'}贵在${ZHI[S.gen.gui]}，临地盘${ZHI[S.gen.guiSeat]}，${S.gen.shun ? '顺行' : '逆行'}`);
+    const hm = (x) => `${String(Math.floor(x)).padStart(2, '0')}:${String(Math.round((x % 1) * 60) % 60).padStart(2, '0')}`;
+    L.push(`贵人：${S.gen.isDay ? '昼' : '夜'}贵在${ZHI[S.gen.gui]}，临地盘${ZHI[S.gen.guiSeat]}，${S.gen.shun ? '顺行' : '逆行'}${S.gen.sun ? `（北纬 ${o.lat}°、东经 ${o.lon}°，真太阳时 ${hm(S.gen.sun.solar)}，日出 ${hm(S.gen.sun.rise)}、日落 ${hm(S.gen.sun.set)}）` : '（卯至申为昼）'}`);
     if (S.plate.fuyin) L.push('天地盘：伏吟'); else if (S.plate.fanyin) L.push('天地盘：返吟');
     L.push('');
     L.push('天地盘（地盘 → 天盘 · 天将）：');
@@ -947,7 +1002,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     return L.join('\n');
   }
 
-  return { cast, toText, ZHI, GAN, GENERALS, JIANG_NAME, JIGONG, ZHI_WX };
+  return { cast, toText, DEFAULT_OPTS, OPT_TEXT, ZHI, GAN, GENERALS, JIANG_NAME, JIGONG, ZHI_WX };
 });
 
 </script>
@@ -1235,7 +1290,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     if (k === 2) x = h(2, '天盘') + `<p>以月将${zn(P.pillars.jiang)}加在占时${zn(P.pillars.hourZhi)}上，十二支随之顺时针转动 ${P.plate.rot} 格，形成天盘。</p>${P.plate.fuyin ? '<p><b>月将与占时相同，天地盘重合，是伏吟课。</b></p>' : P.plate.fanyin ? '<p><b>天盘与地盘处处对冲，是返吟课。</b></p>' : ''}`;
     if (k === 3) x = h(3, '四课') + `<ul>${C.ke4.map((c) => `<li>第${'一二三四'[c.no - 1]}课：${c.no === 1 ? `日干${c.down}寄${zn(P.ke.jigong)}，` : c.no === 3 ? `日支${c.down}，` : `以上一课上神${c.down}为下，`}其上天盘为 <b>${c.upCh}</b></li>`).join('')}</ul><p class="rule">十干寄宫：甲寅 乙辰 丙戊巳 丁己未 庚申 辛戌 壬亥 癸丑。</p>`;
     if (k === 4) x = h(4, '发三传') + `<p>课体：<b>${P.chuan.method}</b></p><ul>${P.chuan.why.map((w) => `<li>${w}</li>`).join('')}</ul><p>三传：${C.chuan.map((t) => `${t.pos} <b>${t.zhi}</b>`).join('，')}。</p>`;
-    if (k === 5) x = h(5, '十二天将') + `<p>${C.dayGan}日${P.gen.isDay ? '昼' : '夜'}占，贵人在${zn(P.gen.gui)}。天盘${zn(P.gen.gui)}临地盘${zn(P.gen.guiSeat)}，${P.gen.shun ? '在亥至辰之间，顺行' : '在巳至戌之间，逆行'}，依次排贵人、腾蛇、朱雀、六合、勾陈、青龙、天空、白虎、太常、玄武、太阴、天后。</p>`;
+    if (k === 5) x = h(5, '十二天将') + `<p>${C.dayGan}日${P.gen.isDay ? '昼' : '夜'}占（${C.opts.dayNight === 'sun' ? '按当地日出日落' : '卯至申为昼'}），贵人在${zn(P.gen.gui)}。天盘${zn(P.gen.gui)}临地盘${zn(P.gen.guiSeat)}，${P.gen.shun ? '在亥至辰之间，顺行' : '在巳至戌之间，逆行'}，依次排贵人、腾蛇、朱雀、六合、勾陈、青龙、天空、白虎、太常、玄武、太阴、天后。</p>`;
     if (k === 6) x = h(6, '遁干、六亲、旬空') + `<p>${C.input.text.slice(0, 10)}为${P.pillars.day}日，在${P.extra.xun}旬，按旬遁出各支天干；旬空${P.extra.kong.map(zn).join('、')}。</p><ul>${C.chuan.map((t) => `<li>${t.pos} ${t.dun}${t.zhi}：${t.general}，${t.qin}${t.kong ? '，旬空' : ''}</li>`).join('')}</ul><p class="rule">六亲以日干${C.dayGan}（${C.dayWx}）为我：生我父母，我生子孙，克我官鬼，我克妻财，同我兄弟。</p>`;
     if (k === 7) x = h(7, '课成') + `<p>${P.pillars.day}日${zn(P.pillars.hourZhi)}时，${zn(P.pillars.jiang)}将，${P.chuan.method}课，三传 ${C.chuan.map((t) => t.zhi).join(' ')}。</p>`;
     $('explain').innerHTML = x;
@@ -1311,12 +1366,35 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
 
   const pad = (n) => String(n).padStart(2, '0');
   function beijingNow() { const d = new Date(Date.now() + 8 * 3600e3); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`; }
+  // ── 起课设置（记在本机浏览器里）──
+  const OPT_KEY = 'liuren-opts-v1';
+  function readOpts() {
+    const lat = parseFloat($('o-lat').value), lon = parseFloat($('o-lon').value);
+    return { dayChange: +$('o-day').value, dayNight: $('o-dn').value, lat: isFinite(lat) ? lat : 39.9, lon: isFinite(lon) ? lon : 116.4 };
+  }
+  const optSummary = (o) => `${LR.OPT_TEXT.dayChange[o.dayChange]} · ${o.dayNight === 'sun' ? `日出日落（${o.lat}°N ${o.lon}°E）` : '卯申分昼夜'}`;
+  function syncOpts() {
+    const o = readOpts();
+    $('optSum').textContent = optSummary(o);
+    $('o-geo').hidden = o.dayNight !== 'sun';
+    try { localStorage.setItem(OPT_KEY, JSON.stringify(o)); } catch (e) { /* 无痕模式等 */ }
+  }
+  (function loadOpts() {
+    let o = null;
+    try { o = JSON.parse(localStorage.getItem(OPT_KEY) || 'null'); } catch (e) { o = null; }
+    o = Object.assign({}, LR.DEFAULT_OPTS, o || {});
+    $('o-day').value = String(o.dayChange); $('o-dn').value = o.dayNight; $('o-lat').value = o.lat; $('o-lon').value = o.lon;
+    syncOpts();
+  })();
+  for (const id of ['o-day', 'o-dn', 'o-lat', 'o-lon']) $(id).addEventListener('change', syncOpts);
+
   $('form').addEventListener('submit', (e) => {
     e.preventDefault();
     const v = $('dt').value; if (!v) return;
     const [ds, ts] = v.split('T'); const [y, m, d] = ds.split('-').map(Number); const [hh, mm] = ts.split(':').map(Number);
     question = $('q').value.trim();
-    C = LR.cast(y, m, d, hh, mm);
+    C = LR.cast(y, m, d, hh, mm, readOpts());
+    $('foot').textContent = `本课设置：${optSummary(C.opts)}。月将在中气交接的精确时刻换将，节气用截断 VSOP87 自行计算，误差在 1 分钟以内。取传口径：伏吟/返吟 → 贼克 → 比用 → 涉害（《六壬大全》数深浅：起点与本家不计，等深取临孟、临仲，再平阳日干上、阴日支上）→ 八专 → 遥克 → 别责 → 昴星。`;
     build();
     $('out').textContent = LR.toText(C, question);
     ritual();

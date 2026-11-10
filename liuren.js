@@ -28,7 +28,8 @@
   // 十二天将
   const GENERALS = ['贵人', '腾蛇', '朱雀', '六合', '勾陈', '青龙', '天空', '白虎', '太常', '玄武', '太阴', '天后'];
   // 贵人：日干 → [昼贵, 夜贵]（甲戊庚牛羊，乙己鼠猴乡，丙丁猪鸡位，壬癸兔蛇藏，六辛逢马虎）
-  const GUIREN = { 0: [1, 7], 4: [1, 7], 6: [1, 7], 1: [0, 8], 5: [0, 8], 2: [11, 9], 3: [11, 9], 8: [3, 5], 9: [3, 5], 7: [6, 2] };
+  // 甲戊庚丑昼未夜，乙己子昼申夜，丙丁亥昼酉夜，壬癸巳昼卯夜，辛午昼寅夜（庚不归马虎）
+  const GUIREN = { 0: [1, 7], 4: [1, 7], 6: [1, 7], 1: [0, 8], 5: [0, 8], 2: [11, 9], 3: [11, 9], 8: [5, 3], 9: [5, 3], 7: [6, 2] };
   // 刑
   const XING = { 0: 3, 3: 0, 2: 5, 5: 8, 8: 2, 1: 10, 10: 7, 7: 1, 4: 4, 6: 6, 9: 9, 11: 11 };
   // 驿马（按三合局）
@@ -46,8 +47,25 @@
     return '妻财';
   }
 
-  function cast(y, m, d, h, mi) {
-    const P = QM.fourPillars(y, m, d, h, mi);
+  // 排盘选项：默认口径锁定为 23 点换日、卯至申为昼
+  const DEFAULT_OPTS = { dayChange: 23, dayNight: 'maoshen', lat: 39.9, lon: 116.4 };
+  const OPT_TEXT = {
+    dayChange: { 23: '23 点换日', 0: '0 点换日' },
+    dayNight: { maoshen: '卯至申为昼', sun: '按当地日出日落分昼夜' },
+  };
+  // 当地是否白天：真太阳时与日出日落时角比较
+  function sunUp(y, m, d, h, mi, lonSun, lat, lonDeg) {
+    const eps = 23.4393 * Math.PI / 180, lam = lonSun * Math.PI / 180, phi = lat * Math.PI / 180;
+    const dec = Math.asin(Math.sin(eps) * Math.sin(lam));
+    const c = (Math.sin(-0.833 * Math.PI / 180) - Math.sin(phi) * Math.sin(dec)) / (Math.cos(phi) * Math.cos(dec));
+    const half = c <= -1 ? 12 : c >= 1 ? 0 : Math.acos(c) * 180 / Math.PI / 15; // 半昼长（小时）
+    const solar = h + mi / 60 + ((lonDeg - 120) * 4 + QM.equationOfTime(y, m, d, h)) / 60;
+    return { day: Math.abs(solar - 12) < half, rise: 12 - half, set: 12 + half, solar };
+  }
+
+  function cast(y, m, d, h, mi, opts) {
+    const o = Object.assign({}, DEFAULT_OPTS, opts || {});
+    const P = QM.fourPillars(y, m, d, h, mi, { dayChange: o.dayChange });
     const steps = {};
     const dayGan = P.dayIdx % 10, dayZhi = P.dayIdx % 12, hourZhi = P.hourIdx % 12;
     const yangDay = dayGan % 2 === 0;
@@ -97,7 +115,7 @@
     function sheHai(cands) {
       const scored = cands.map((c) => {
         const from = seat(c.up); let n = 0; const hits = [];
-        for (let i = 0; i < 12; i++) {
+        for (let i = 1; i < 12; i++) { // 起点（所临地盘）与本家都不计
           const p = mod(from + i, 12);
           if (p === c.up) break;
           if (ke(ZHI_WX[p], c.upWx)) { n++; hits.push(ZHI[p]); }
@@ -108,15 +126,13 @@
       const max = Math.max(...scored.map((s) => s.n));
       let top = scored.filter((s) => s.n === max);
       why.push('涉害：' + scored.map((s) => `${s.c.upCh}从地盘${ZHI[s.from]}归本家，受克 ${s.n} 次${s.hits.length ? '（' + s.hits.join('') + '）' : ''}`).join('；'));
-      let sub = '涉害';
-      if (top.length > 1) {
-        const m1 = top.filter((s) => MENG.includes(s.from));
-        const m2 = top.filter((s) => ZHONG.includes(s.from));
-        if (m1.length >= 1) { top = m1; sub = '见机'; } else if (m2.length >= 1) { top = m2; sub = '察微'; }
-        if (top.length > 1) { top = [yangDay ? top[0] : top[top.length - 1]]; sub = '缀瑕'; }
-        why.push(`受克深浅相同，${sub === '见机' ? '取临孟神者' : sub === '察微' ? '取临仲神者' : (yangDay ? '阳日取干上一侧' : '阴日取支上一侧')}`);
-      }
-      return { pick: top[0].c, sub };
+      if (top.length === 1) return { up: top[0].c.up, sub: '涉害' };
+      const m1 = top.filter((s) => MENG.includes(s.from));
+      if (m1.length === 1) { why.push('涉害等深，取临孟神者'); return { up: m1[0].c.up, sub: '见机' }; }
+      const m2 = m1.length ? [] : top.filter((s) => ZHONG.includes(s.from));
+      if (m2.length === 1) { why.push('涉害等深，无临孟者，取临仲神者'); return { up: m2[0].c.up, sub: '察微' }; }
+      why.push(`涉害等深且孟仲不能分，${yangDay ? '阳日取干上神' : '阴日取支上神'}`);
+      return { up: yangDay ? k1u : k3u, sub: '缀瑕' };
     }
 
     function zeiKe(label) {
@@ -130,7 +146,7 @@
       why.push(`比用：与日干同为${yangDay ? '阳' : '阴'}者 ${bi.length ? bi.map((c) => c.upCh).join('、') : '无'}`);
       if (bi.length === 1) { method = (label || '') + '比用（知一）'; return bi[0].up; }
       const r = sheHai(bi.length ? bi : cands);
-      method = (label || '') + r.sub; return r.pick.up;
+      method = (label || '') + r.sub; return r.up;
     }
 
     const hasKe = ke4.some((c) => c.zei || c.ke);
@@ -174,14 +190,16 @@
     steps.chuan = { method, why, list: [chu, zhong, mo] };
 
     // ⑤ 十二天将
-    const isDay = hourZhi >= 3 && hourZhi <= 8;
+    let isDay, sun = null;
+    if (o.dayNight === 'sun') { sun = sunUp(y, m, d, h, mi, P.lon, o.lat, o.lon); isDay = sun.day; }
+    else isDay = hourZhi >= 3 && hourZhi <= 8;
     const gui = GUIREN[dayGan][isDay ? 0 : 1];
     const guiSeat = seat(gui);
     const shun = [11, 0, 1, 2, 3, 4].includes(guiSeat);
     const generalAt = {}; // 地盘位置 -> 天将
     for (let i = 0; i < 12; i++) generalAt[mod(guiSeat + (shun ? i : -i), 12)] = GENERALS[i];
     const generalOfTian = (tz) => generalAt[seat(tz)];
-    steps.gen = { isDay, gui, guiSeat, shun };
+    steps.gen = { isDay, gui, guiSeat, shun, sun };
 
     // ⑥ 遁干、六亲、旬空
     const xunStart = mod(P.dayIdx - (P.dayIdx % 10), 12);
@@ -202,19 +220,22 @@
 
     return {
       input: { y, m, d, h, mi, text: `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')} ${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}` },
-      dayGan: GAN[dayGan], dayZhi: ZHI[dayZhi], yangDay, dayWx,
+      opts: o, dayGan: GAN[dayGan], dayZhi: ZHI[dayZhi], yangDay, dayWx,
       steps, plate, ke4, chuan,
     };
   }
 
   function toText(c, question) {
     const S = c.steps, L = [];
-    L.push('【大六壬课式】月将加占时 · 九宗门取三传');
+    const o = c.opts;
+    L.push(`【大六壬课式】月将加占时 · 九宗门取三传 · ${OPT_TEXT.dayChange[o.dayChange]} · ${OPT_TEXT.dayNight[o.dayNight]}`);
+    L.push('取传口径：伏吟/返吟 → 贼克 → 比用 → 涉害（《六壬大全》数深浅，起点与本家不计；等深取临孟、临仲，再平阳日干上、阴日支上）→ 八专 → 遥克 → 别责 → 昴星');
     L.push(`占时：${c.input.text}（北京时间，未做真太阳时校正）`);
     L.push(`四柱：${S.pillars.year}年 ${S.pillars.month}月 ${S.pillars.day}日 ${S.pillars.hour}时`);
     L.push(`月将：${ZHI[S.pillars.jiang]}（${S.pillars.jiangName}，${S.pillars.zhongqi}后），占时：${ZHI[S.pillars.hourZhi]}`);
     L.push(`旬：${S.extra.xun}旬，旬空：${S.extra.kong.map((z) => ZHI[z]).join('')}；日马：${ZHI[S.extra.dayMa]}`);
-    L.push(`贵人：${S.gen.isDay ? '昼' : '夜'}贵在${ZHI[S.gen.gui]}，临地盘${ZHI[S.gen.guiSeat]}，${S.gen.shun ? '顺行' : '逆行'}`);
+    const hm = (x) => `${String(Math.floor(x)).padStart(2, '0')}:${String(Math.round((x % 1) * 60) % 60).padStart(2, '0')}`;
+    L.push(`贵人：${S.gen.isDay ? '昼' : '夜'}贵在${ZHI[S.gen.gui]}，临地盘${ZHI[S.gen.guiSeat]}，${S.gen.shun ? '顺行' : '逆行'}${S.gen.sun ? `（北纬 ${o.lat}°、东经 ${o.lon}°，真太阳时 ${hm(S.gen.sun.solar)}，日出 ${hm(S.gen.sun.rise)}、日落 ${hm(S.gen.sun.set)}）` : '（卯至申为昼）'}`);
     if (S.plate.fuyin) L.push('天地盘：伏吟'); else if (S.plate.fanyin) L.push('天地盘：返吟');
     L.push('');
     L.push('天地盘（地盘 → 天盘 · 天将）：');
@@ -236,5 +257,5 @@
     return L.join('\n');
   }
 
-  return { cast, toText, ZHI, GAN, GENERALS, JIANG_NAME, JIGONG, ZHI_WX };
+  return { cast, toText, DEFAULT_OPTS, OPT_TEXT, ZHI, GAN, GENERALS, JIANG_NAME, JIGONG, ZHI_WX };
 });
