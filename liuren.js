@@ -212,6 +212,22 @@
     for (const c of ke4) { c.general = generalOfTian(c.up); }
     steps.extra = { xun: QM.ganzhi(P.dayIdx - (P.dayIdx % 10)), kong, dayMa: MA(dayZhi) };
 
+    // ⑦ 本命、行年（选填）：本命为生年地支；行年按虚岁，男一岁起丙寅顺行，女一岁起壬申逆行
+    if (o.birthYear && (o.gender === 'm' || o.gender === 'f')) {
+      const askYear = (m <= 2 && lon >= 240 && lon < 315) ? y - 1 : y; // 占年按立春
+      const age = askYear - o.birthYear + 1;
+      if (age >= 1 && age <= 150) {
+        const bmIdx = mod(o.birthYear - 4, 60);
+        const xnIdx = o.gender === 'm' ? mod(2 + (age - 1), 60) : mod(8 - (age - 1), 60);
+        const bm = bmIdx % 12, xn = xnIdx % 12;
+        steps.person = {
+          gender: o.gender, birthYear: o.birthYear, age,
+          benming: QM.ganzhi(bmIdx), bm, bmUp: tian(bm),
+          xingnian: QM.ganzhi(xnIdx), xn, xnUp: tian(xn),
+        };
+      }
+    }
+
     const plate = [];
     for (let dpos = 0; dpos < 12; dpos++) {
       const t = tian(dpos);
@@ -235,6 +251,11 @@
     L.push(`四柱：${S.pillars.year}年 ${S.pillars.month}月 ${S.pillars.day}日 ${S.pillars.hour}时`);
     L.push(`月将：${ZHI[S.pillars.jiang]}（${S.pillars.jiangName}，${S.pillars.zhongqi}后），占时：${ZHI[S.pillars.hourZhi]}`);
     L.push(`旬：${S.extra.xun}旬，旬空：${S.extra.kong.map((z) => ZHI[z]).join('')}；日马：${ZHI[S.extra.dayMa]}`);
+    if (S.person) {
+      const ps = S.person, gn = (z) => c.plate[mod(z - S.plate.shift, 12)].general;
+      L.push(`本命：${ps.gender === 'm' ? '男' : '女'}命，${ps.birthYear} 年生（${ps.benming}），本命${ZHI[ps.bm]}，上见${ZHI[ps.bmUp]}（${gn(ps.bmUp)}）`);
+      L.push(`行年：虚岁 ${ps.age}，行年${ps.xingnian}，行年${ZHI[ps.xn]}，上见${ZHI[ps.xnUp]}（${gn(ps.xnUp)}）`);
+    }
     const hm = (x) => `${String(Math.floor(x)).padStart(2, '0')}:${String(Math.round((x % 1) * 60) % 60).padStart(2, '0')}`;
     L.push(`贵人：${S.gen.isDay ? '昼' : '夜'}贵在${ZHI[S.gen.gui]}，临地盘${ZHI[S.gen.guiSeat]}，${S.gen.shun ? '顺行' : '逆行'}${S.gen.sun ? `（北纬 ${o.lat}°、东经 ${o.lon}°，真太阳时 ${hm(S.gen.sun.solar)}，日出 ${hm(S.gen.sun.rise)}、日落 ${hm(S.gen.sun.set)}）` : '（卯至申为昼）'}`);
     if (S.plate.fuyin) L.push('天地盘：伏吟'); else if (S.plate.fanyin) L.push('天地盘：返吟');

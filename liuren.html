@@ -93,6 +93,9 @@ button.primary:hover:not(:disabled) { color: var(--surface); filter: brightness(
 .opt .impact b { font-weight: 700; }
 .opt .impact.same b { color: var(--jade); }
 .opt .impact.diff b { color: var(--cinnabar); }
+.person { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.person .full { grid-column: 1 / -1; font-size: 12px; color: var(--muted); margin: 0; }
+.chip.badge.me { background: var(--accent); }
 .altar .hint { position: relative; font-size: 12.5px; color: var(--muted); margin: 0; }
 
 /* 第二、三幕 */
@@ -213,6 +216,18 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
         <label class="label" for="q">所问之事</label>
         <textarea id="q" rows="2" placeholder="心中默念所问，写在这里。例如：这次合作能否谈成"></textarea>
       </div>
+      <div class="field">
+        <span class="label">本命与行年（选填）</span>
+        <div class="person">
+          <input id="by" type="number" inputmode="numeric" min="1900" max="2100" placeholder="出生年，如 1990" aria-label="出生年">
+          <select id="gd" data-fancy aria-label="性别">
+            <option value="" data-desc="不填则不排本命、行年。">不填</option>
+            <option value="m" data-desc="行年一岁起丙寅，每年顺行一位。">男命</option>
+            <option value="f" data-desc="行年一岁起壬申，每年逆行一位。">女命</option>
+          </select>
+          <p class="full">出生年按立春换年：立春前出生的，请填上一年。填了会在盘上标出本命和行年所在，并写进课式原文。</p>
+        </div>
+      </div>
       <details class="settings" id="settings">
         <summary><span>起课设置</span><span class="sum" id="optSum"></span></summary>
         <div class="opts">
@@ -304,7 +319,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   const ZHI = LR.ZHI;
   // 十二宫在 4×4 外圈的位置（上南下北，巳午未申在上）
   const POS = { 5: [0, 0], 6: [1, 0], 7: [2, 0], 8: [3, 0], 9: [3, 1], 10: [3, 2], 11: [3, 3], 0: [2, 3], 1: [1, 3], 2: [0, 3], 3: [0, 2], 4: [0, 1] };
-  const SLOT = { gen: [.5, .2], tian: [.5, .52], di: [.8, .82], badge: [.84, .18], dun: [.2, .52] };
+  const SLOT = { gen: [.5, .2], tian: [.5, .52], di: [.8, .82], badge: [.84, .18], dun: [.2, .52], me: [.18, .82] };
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const STAGES = ['月将', '地盘', '天盘', '四课', '三传', '天将', '遁干六亲', '课成'];
   const mod = (a, n) => ((a % n) + n) % n;
@@ -356,12 +371,14 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
       mkChip('gen' + z, 'gen', '');         // 地盘 z 上的天将
       mkChip('dun' + z, 'dun', '');
       mkChip('kong' + z, 'badge', '空');
+      mkChip('me' + z, 'badge me', '');
     }
     for (let z = 0; z < 12; z++) {
       place(chips['di' + z], z, 'di', false); place(chips['tian' + z], z, 'tian', false);
-      place(chips['gen' + z], z, 'gen', false); place(chips['dun' + z], z, 'dun', false); place(chips['kong' + z], z, 'badge', false);
+      place(chips['gen' + z], z, 'gen', false); place(chips['dun' + z], z, 'dun', false); place(chips['kong' + z], z, 'badge', false); place(chips['me' + z], z, 'me', false);
       chips['gen' + z].textContent = C.plate[z].general || '';
       chips['dun' + z].textContent = C.plate[z].dun || '';
+      chips['me' + z].textContent = C.steps.person ? (z === C.steps.person.bm ? '命' : '') + (z === C.steps.person.xn ? '年' : '') : '';
     }
     buildCenter();
   }
@@ -388,7 +405,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   // ── 中央：四课与三传 ──
   // 四课、三传的元素只建一次；之后只改文字和显隐，已显示的部分不会重新淡入
   function buildCenter() {
-    $('ke4').innerHTML = C.ke4.map((k) => `<div class="ke pend" id="ke${k.no}"><span class="g"></span><span class="u">${k.upCh}</span><span class="d">${k.down}</span><span class="x"></span><span class="n">${'一二三四'[k.no - 1]}课</span></div>`).join('');
+    $('ke4').innerHTML = C.ke4.map((k) => `<div class="ke pend" id="kecol${k.no}"><span class="g"></span><span class="u">${k.upCh}</span><span class="d">${k.down}</span><span class="x"></span><span class="n">${'一二三四'[k.no - 1]}课</span></div>`).join('');
     $('chuan').innerHTML = C.chuan.map((t, i) => `<div class="pend" id="ch${i}"><span class="p">${t.pos}</span><span class="dg"></span><span class="z">${t.zhi}</span><span class="gn"></span><span class="q"></span></div>`).join('');
     $('method').textContent = S().chuan.method; $('method').classList.add('pend');
   }
@@ -396,7 +413,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   function renderCenter(opt) {
     const { keN = 0, marks = false, chuanN = 0, gens = false, dun = false, method = false } = opt;
     C.ke4.forEach((k, i) => {
-      const el = $('ke' + k.no);
+      const el = $('kecol' + k.no);
       el.classList.toggle('pend', i >= keN);
       setText(el.querySelector('.g'), gens ? k.general : '');
       setText(el.querySelector('.x'), marks ? (k.zei ? '贼' : k.ke ? '克' : '') : '');
@@ -478,6 +495,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     for (let z = 0; z < 12; z++) {
       place(chips['dun' + z], z, 'dun', k >= 6 && !!C.plate[z].dun);
       place(chips['kong' + z], z, 'badge', k >= 6 && C.plate[z].kong);
+      place(chips['me' + z], z, 'me', k >= 6 && !!chips['me' + z].textContent);
     }
     renderCenter(CENTER[k] || {});
     if (k === 0) drawDial(P.pillars.sunLon);
@@ -550,6 +568,11 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
       for (let z = 0; z < 12; z++) later(60 * z + 200, () => place(chips['dun' + z], z, 'dun', !!C.plate[z].dun));
       later(1200, () => { for (let z = 0; z < 12; z++) if (C.plate[z].kong) { place(chips['kong' + z], z, 'badge', true); hl(z, 'hot'); } });
       later(1700, () => renderCenter(CENTER[6]));
+      if (P.person) {
+        later(2100, () => { place(chips['me' + P.person.bm], P.person.bm, 'me', true); $('cell' + P.person.bm).classList.add('pulse'); });
+        later(2600, () => { place(chips['me' + P.person.xn], P.person.xn, 'me', true); $('cell' + P.person.xn).classList.add('pulse'); });
+        later(3300, done); return;
+      }
       later(2400, done); return;
     }
     if (k === 7) { $('board').classList.add('done'); later(300, done); return; }
@@ -567,7 +590,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
       `日干${C.dayGan}寄${zn(P.ke.jigong)}，日支${C.dayZhi}，起出四课`,
       `${P.chuan.method}发用，三传 <b>${ch}</b>`,
       `${P.gen.isDay ? '昼' : '夜'}贵在${zn(P.gen.gui)}，临${zn(P.gen.guiSeat)}${P.gen.shun ? '顺' : '逆'}布十二天将`,
-      `${P.extra.xun}旬遁干，旬空 <b>${P.extra.kong.map(zn).join('')}</b>`,
+      `${P.extra.xun}旬遁干，旬空 <b>${P.extra.kong.map(zn).join('')}</b>${P.person ? `；本命${zn(P.person.bm)}，行年${zn(P.person.xn)}` : ''}`,
       '课成',
     ];
     $('caption').innerHTML = step + `<span>${k >= 0 ? t[k] : esc(C.input.text) + (question ? '　问：' + esc(question) : '')}</span>`;
@@ -581,7 +604,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     if (k === 3) x = h(3, '四课') + `<ul>${C.ke4.map((c) => `<li>第${'一二三四'[c.no - 1]}课：${c.no === 1 ? `日干${c.down}寄${zn(P.ke.jigong)}，` : c.no === 3 ? `日支${c.down}，` : `以上一课上神${c.down}为下，`}其上天盘为 <b>${c.upCh}</b></li>`).join('')}</ul><p class="rule">十干寄宫：甲寅 乙辰 丙戊巳 丁己未 庚申 辛戌 壬亥 癸丑。</p>`;
     if (k === 4) x = h(4, '发三传') + `<p>课体：<b>${P.chuan.method}</b></p><ul>${P.chuan.why.map((w) => `<li>${w}</li>`).join('')}</ul><p>三传：${C.chuan.map((t) => `${t.pos} <b>${t.zhi}</b>`).join('，')}。</p>`;
     if (k === 5) x = h(5, '十二天将') + `<p>${C.dayGan}日${P.gen.isDay ? '昼' : '夜'}占（${C.opts.dayNight === 'sun' ? '按当地日出日落' : '卯至申为昼'}），贵人在${zn(P.gen.gui)}。天盘${zn(P.gen.gui)}临地盘${zn(P.gen.guiSeat)}，${P.gen.shun ? '在亥至辰之间，顺行' : '在巳至戌之间，逆行'}，依次排贵人、腾蛇、朱雀、六合、勾陈、青龙、天空、白虎、太常、玄武、太阴、天后。</p>`;
-    if (k === 6) x = h(6, '遁干、六亲、旬空') + `<p>${C.input.text.slice(0, 10)}为${P.pillars.day}日，在${P.extra.xun}旬，按旬遁出各支天干；旬空${P.extra.kong.map(zn).join('、')}。</p><ul>${C.chuan.map((t) => `<li>${t.pos} ${t.dun}${t.zhi}：${t.general}，${t.qin}${t.kong ? '，旬空' : ''}</li>`).join('')}</ul><p class="rule">六亲以日干${C.dayGan}（${C.dayWx}）为我：生我父母，我生子孙，克我官鬼，我克妻财，同我兄弟。</p>`;
+    if (k === 6) x = h(6, '遁干、六亲、旬空') + `<p>${C.input.text.slice(0, 10)}为${P.pillars.day}日，在${P.extra.xun}旬，按旬遁出各支天干；旬空${P.extra.kong.map(zn).join('、')}。</p><ul>${C.chuan.map((t) => `<li>${t.pos} ${t.dun}${t.zhi}：${t.general}，${t.qin}${t.kong ? '，旬空' : ''}</li>`).join('')}</ul><p class="rule">六亲以日干${C.dayGan}（${C.dayWx}）为我：生我父母，我生子孙，克我官鬼，我克妻财，同我兄弟。</p>${P.person ? `<p>${P.person.gender === 'm' ? '男' : '女'}命 ${P.person.birthYear} 年生，本命${zn(P.person.bm)}（${P.person.benming}）；虚岁 ${P.person.age}，行年${P.person.xingnian}。盘上以“命”“年”标出。</p><p class="rule">行年：男命一岁起丙寅顺行，女命一岁起壬申逆行，每年一位。</p>` : ''}`;
     if (k === 7) x = h(7, '课成') + `<p>${P.pillars.day}日${zn(P.pillars.hourZhi)}时，${zn(P.pillars.jiang)}将，${P.chuan.method}课，三传 ${C.chuan.map((t) => t.zhi).join(' ')}。</p>`;
     $('explain').innerHTML = x;
   }
@@ -706,7 +729,8 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     const v = $('dt').value; if (!v) return;
     const [ds, ts] = v.split('T'); const [y, m, d] = ds.split('-').map(Number); const [hh, mm] = ts.split(':').map(Number);
     question = $('q').value.trim();
-    C = LR.cast(y, m, d, hh, mm, readOpts());
+    const by = parseInt($('by').value, 10);
+    C = LR.cast(y, m, d, hh, mm, Object.assign(readOpts(), { birthYear: isFinite(by) ? by : null, gender: $('gd').value }));
     $('foot').textContent = `本课设置：${optSummary(C.opts)}。月将在中气交接的精确时刻换将，节气用截断 VSOP87 自行计算，误差在 1 分钟以内。取传口径：伏吟/返吟 → 贼克 → 比用 → 涉害（《六壬大全》数深浅：起点与本家不计，等深取临孟、临仲，再平阳日干上、阴日支上）→ 八专 → 遥克 → 别责 → 昴星。`;
     build();
     $('out').textContent = LR.toText(C, question);

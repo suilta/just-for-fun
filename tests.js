@@ -162,6 +162,11 @@ for (let i = 0; i < N; i++) {
   check('对照1 贵人', Z[S.gen.gui] === '申' && Z[S.gen.guiSeat] === '寅' && S.gen.shun && !S.gen.isDay);
   const plate = c.plate.map((x) => x.di + x.tian + x.general).join(' ');
   check('对照1 天地盘', plate === '子午太阴 丑未天后 寅申贵人 卯酉腾蛇 辰戌朱雀 巳亥六合 午子勾陈 未丑青龙 申寅天空 酉卯白虎 戌辰太常 亥巳玄武', plate);
+  // 同一软件给出的本命行年：壬午年生男命行年寅，庚午年生女命行年申，本命皆午
+  const m = LR.cast(2002, 5, 31, 4, 0, { birthYear: 2002, gender: 'm' }).steps.person;
+  const f = LR.cast(2002, 5, 31, 4, 0, { birthYear: 1990, gender: 'f' }).steps.person;
+  check('对照1 男命本命行年', m.benming === '壬午' && Z[m.bm] === '午' && Z[m.xn] === '寅', JSON.stringify(m));
+  check('对照1 女命本命行年', f.benming === '庚午' && Z[f.bm] === '午' && Z[f.xn] === '申', JSON.stringify(f));
   check('对照1 旬空', S.extra.kong.map((z) => Z[z]).join('') === '辰巳');
 })();
 
