@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>奇门遁甲排盘演示</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* 布局：左侧九宫盘（洛书方位，上南下北），右侧分阶段讲解；底部是给 AI 的文本 */
+:root {
+  --bg: #e9eeec;
+  --surface: #f7f9f8;
+  --cell: #fbfcfb;
+  --ink: #17212a;
+  --muted: #5a6870;
+  --line: #c4cfcc;
+  --accent: #2c5a86;      /* 靛青：八门、交互 */
+  --gold: #9a6f12;        /* 九星 */
+  --cinnabar: #b0362a;    /* 八神、凶、强调 */
+  --jade: #2f7a5c;        /* 吉 */
+  --hl: rgba(44, 90, 134, .14);
+  --f-display: "Noto Serif SC", "Songti SC", "STSong", serif;
+  --f-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1418; --surface: #151e24; --cell: #19242b; --ink: #e1e8e6; --muted: #8fa0a7; --line: #2b3a42;
+    --accent: #84aedb; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(132, 174, 219, .16);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1418; --surface: #151e24; --cell: #19242b; --ink: #e1e8e6; --muted: #8fa0a7; --line: #2b3a42;
+  --accent: #84aedb; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(132, 174, 219, .16);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(26px, 4vw, 36px); font-weight: 900; letter-spacing: .04em; }
+h1 small { display: inline-block; font-family: var(--f-body); font-size: 14px; font-weight: 400; color: var(--muted); letter-spacing: 0; margin-left: 10px; }
+.label { font-size: 12px; letter-spacing: .12em; color: var(--muted); }
+
+/* 输入区 */
+.controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field.grow { flex: 1 1 260px; }
+input, textarea { font: inherit; color: var(--ink); background: var(--cell); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; }
+input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button { font: inherit; cursor: pointer; border-radius: 6px; border: 1px solid var(--line); background: var(--cell); color: var(--ink); padding: 8px 14px; }
+button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 700; }
+button.primary:hover { color: var(--surface); filter: brightness(1.08); }
+
+.main { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 880px) { .main { grid-template-columns: minmax(0, 1fr); } }
+
+/* 九宫盘 */
+.boardbox { display: grid; gap: 8px; }
+.compass { display: flex; justify-content: space-between; font-family: var(--f-display); color: var(--muted); font-size: 13px; }
+.board { position: relative; width: 100%; max-width: 600px; aspect-ratio: 1; margin: 0 auto; }
+.grid { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 4px; }
+.cell { position: relative; background: var(--cell); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; transition: background .3s, box-shadow .3s; }
+.cell .gua { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--f-display); font-weight: 900; font-size: clamp(42px, 9vw, 84px); color: var(--ink); opacity: .06; pointer-events: none; }
+.cell .pname { position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%); font-size: 10.5px; color: var(--muted); white-space: nowrap; letter-spacing: .05em; }
+.cell.hl { background: var(--hl); box-shadow: inset 0 0 0 2px var(--accent); }
+.cell.hot { box-shadow: inset 0 0 0 2px var(--cinnabar); }
+.cell.pulse { animation: pulse 1s ease-in-out 2; }
+@keyframes pulse { 50% { box-shadow: inset 0 0 0 4px var(--accent); } }
+.paths { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.paths polyline { fill: none; stroke: var(--cinnabar); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: .55; }
+.paths circle { fill: var(--cinnabar); }
+.paths text { fill: var(--cinnabar); font-family: var(--f-mono); font-size: 9px; }
+
+.chips { position: absolute; inset: 0; pointer-events: none; }
+.chip { position: absolute; transform: translate(-50%, -50%) scale(1); white-space: nowrap; line-height: 1.1;
+  transition: left var(--mv, .32s) ease-in-out, top var(--mv, .32s) ease-in-out, opacity .35s, transform .35s; }
+.chip.off { opacity: 0; transform: translate(-50%, -50%) scale(.6); }
+.chip.dim { opacity: .28; }
+.chip.star { font-family: var(--f-display); font-weight: 700; color: var(--gold); font-size: clamp(14px, 2.5vw, 20px); }
+.chip.qin { font-family: var(--f-display); color: var(--gold); font-size: clamp(10px, 1.7vw, 13px); }
+.chip.door { color: var(--accent); font-weight: 700; font-size: clamp(12px, 2vw, 16px); }
+.chip.god { color: var(--cinnabar); font-size: clamp(11px, 1.8vw, 14px); font-weight: 500; }
+.chip.tian { font-family: var(--f-display); font-weight: 900; font-size: clamp(16px, 2.8vw, 22px); color: var(--ink); }
+.chip.di { font-family: var(--f-display); font-weight: 700; font-size: clamp(15px, 2.6vw, 20px); color: var(--muted); }
+.chip.badge { font-size: 10px; color: var(--surface); background: var(--cinnabar); padding: 1px 4px; border-radius: 3px; }
+.chip.badge.ma { background: var(--jade); }
+.chip.key { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; font-size: 12px; color: var(--muted); }
+.legend b { font-weight: 700; }
+
+/* 阶段面板 */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 14px; min-width: 0; }
+.stages { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.stages button { padding: 4px 9px; font-size: 13px; }
+.stages button[aria-current="step"] { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+.stages button.done { border-color: var(--accent); color: var(--accent); }
+.player { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.player .speed { margin-left: auto; display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
+.player .speed input { width: 110px; padding: 0; }
+.explain { min-height: 220px; display: grid; gap: 10px; align-content: start; }
+.explain h2 { font-size: 22px; }
+.explain h2 .no { font-family: var(--f-mono); font-size: 13px; color: var(--muted); font-weight: 400; margin-right: 8px; }
+.explain p { margin: 0; max-width: 62ch; }
+.explain .rule { font-size: 13px; color: var(--muted); border-left: 2px solid var(--line); padding-left: 10px; }
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.kv div { background: var(--cell); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; animation: rise .4s both; }
+.kv div:nth-child(2) { animation-delay: .12s; } .kv div:nth-child(3) { animation-delay: .24s; } .kv div:nth-child(4) { animation-delay: .36s; }
+.kv span { display: block; font-size: 11px; color: var(--muted); letter-spacing: .08em; }
+.kv b { font-family: var(--f-display); font-size: 22px; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.yuan { display: flex; gap: 6px; }
+.yuan span { flex: 1; text-align: center; border: 1px solid var(--line); border-radius: 6px; padding: 4px 0; font-family: var(--f-mono); color: var(--muted); }
+.yuan span.on { border-color: var(--accent); background: var(--hl); color: var(--ink); font-weight: 600; }
+.pat { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
+.pat li { display: flex; gap: 8px; align-items: baseline; }
+.tag { font-size: 11px; padding: 0 5px; border-radius: 3px; border: 1px solid currentColor; flex: none; }
+.tag.凶 { color: var(--cinnabar); } .tag.吉 { color: var(--jade); } .tag.平 { color: var(--muted); }
+
+/* 输出 */
+.output { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 10px; }
+.output header { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.output h2 { font-size: 20px; }
+pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: var(--f-mono); font-size: 13px; line-height: 1.7; background: var(--cell); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; max-height: 520px; overflow: auto; }
+.note { font-size: 12.5px; color: var(--muted); max-width: 80ch; }
+@media (prefers-reduced-motion: reduce) { .chip, .cell { transition: none !important; animation: none !important; } .kv div { animation: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>奇门遁甲 · 排盘八步<small>时家转盘 · 拆补法 · 中五寄坤</small></h1>
+  </header>
+
+  <form class="controls" id="form">
+    <div class="field">
+      <label class="label" for="dt">起局时间（北京时间）</label>
+      <input id="dt" type="datetime-local" required>
+    </div>
+    <div class="field grow">
+      <label class="label" for="q">所问之事（可留空）</label>
+      <input id="q" type="text" placeholder="例如：下个月换工作是否顺利">
+    </div>
+    <button type="button" id="now">现在</button>
+    <button type="submit" class="primary">排盘并播放</button>
+  </form>
+
+  <div class="main">
+    <section class="boardbox" aria-label="九宫盘">
+      <div class="compass"><span>东南 巽</span><span>南 · 离</span><span>坤 西南</span></div>
+      <div class="board" id="board">
+        <div class="grid" id="grid"></div>
+        <svg class="paths" id="paths" viewBox="0 0 300 300" preserveAspectRatio="none"></svg>
+        <div class="chips" id="chips"></div>
+      </div>
+      <div class="compass"><span>东北 艮</span><span>北 · 坎</span><span>乾 西北</span></div>
+      <div class="legend"><span><b style="color:var(--cinnabar)">红</b> 八神</span><span><b style="color:var(--gold)">金</b> 九星</span><span><b style="color:var(--ink)">黑</b> 天盘干</span><span><b style="color:var(--accent)">蓝</b> 八门</span><span><b style="color:var(--muted)">灰</b> 地盘干</span></div>
+    </section>
+
+    <section class="panel" aria-label="排盘步骤">
+      <ol class="stages" id="stages"></ol>
+      <div class="player">
+        <button type="button" id="prev">上一步</button>
+        <button type="button" id="play" class="primary">播放</button>
+        <button type="button" id="next">下一步</button>
+        <label class="speed" for="speed">速度 <input id="speed" type="range" min="0.4" max="2.5" step="0.1" value="1"></label>
+      </div>
+      <div class="explain" id="explain" aria-live="polite"></div>
+    </section>
+  </div>
+
+  <section class="output">
+    <header>
+      <h2>给 AI 的解读材料</h2>
+      <button type="button" id="copy">复制文本</button>
+    </header>
+    <pre id="out"></pre>
+    <p class="note">节气用截断 VSOP87 自行计算，误差在 1 分钟以内。时间按北京时间处理，没有做真太阳时校正；起局时刻恰好在交节前后几分钟的，请自行复核。各门派在置闰、寄宫、格局判定上有差异，本页采用拆补法、中五寄坤二。</p>
+  </section>
+</div>
+
+<script src="qimen.js"></script>
+<script>
+(function () {
+  'use strict';
+  const QM = window.QM;
+  const $ = (id) => document.getElementById(id);
+  const RING = QM.RING;
+  const POS = { 4: [0, 0], 9: [1, 0], 2: [2, 0], 3: [0, 1], 5: [1, 1], 7: [2, 1], 8: [0, 2], 1: [1, 2], 6: [2, 2] };
+  const SLOT = { god: [.2, .17], tian: [.8, .17], tian2: [.6, .17], star: [.5, .43], qin: [.5, .62], door: [.22, .8], di: [.8, .8], badge: [.5, .17], badge2: [.5, .3], diCenter: [.5, .5] };
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const STAGES = ['四柱节气', '阴阳定局', '布地盘', '旬首值符', '转天盘', '转人盘', '排八神', '空马格局'];
+
+  let C = null;        // 当前盘
+  let stage = -1;      // 已完成到第几阶段
+  let timers = [];
+  let playing = false;
+  const chips = {};
+
+  // ── 盘格 ──
+  const grid = $('grid');
+  for (const p of [4, 9, 2, 3, 5, 7, 8, 1, 6]) {
+    const d = document.createElement('div');
+    d.className = 'cell'; d.id = 'cell' + p;
+    const info = QM.PALACE[p];
+    d.innerHTML = `<div class="gua">${info.gua}</div><div class="pname">${p === 5 ? '中五宫' : info.gua + p + ' · ' + info.dir}</div>`;
+    grid.appendChild(d);
+  }
+  const cellsAll = () => [...grid.children];
+
+  function xy(p, slot) {
+    const [c, r] = POS[p]; const [sx, sy] = SLOT[slot];
+    return [(c + sx) / 3 * 100, (r + sy) / 3 * 100];
+  }
+  function mkChip(key, cls, text) {
+    const el = document.createElement('div');
+    el.className = 'chip off ' + cls; el.textContent = text;
+    $('chips').appendChild(el); chips[key] = el; return el;
+  }
+  function place(el, p, slot, show = true) {
+    const [x, y] = xy(p, slot);
+    el.style.left = x + '%'; el.style.top = y + '%';
+    el.classList.toggle('off', !show);
+  }
+  const speed = () => reduce ? 0.02 : 1 / parseFloat($('speed').value);
+  const later = (ms, fn) => timers.push(setTimeout(fn, ms * speed()));
+  function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+  function setMove(ms) { document.documentElement.style.setProperty('--mv', (ms * speed() / 1000) + 's'); }
+
+  // ── 构建一张盘的所有棋子 ──
+  function build() {
+    $('chips').innerHTML = ''; for (const k in chips) delete chips[k];
+    for (let p = 1; p <= 9; p++) mkChip('di' + p, 'di', C.palaces[p].di);
+    for (const p of RING) {
+      mkChip('star' + p, 'star', QM.STAR_HOME[p].slice(1));
+      mkChip('tian' + p, 'tian', C.palaces[p].di); // 天盘干 = 原宫地盘干，随星转
+      mkChip('door' + p, 'door', QM.DOOR_HOME[p]);
+    }
+    mkChip('qin', 'qin', '禽');
+    mkChip('tian5', 'tian', C.palaces[5].di);
+    QM.GODS.forEach((g, i) => mkChip('god' + i, 'god', g));
+    mkChip('kong', 'badge', '空'); mkChip('kong2', 'badge', '空'); mkChip('ma', 'badge ma', '马');
+    chips.star5 = chips.qin;
+    // 初始全部藏在原位
+    for (let p = 1; p <= 9; p++) place(chips['di' + p], p, p === 5 ? 'diCenter' : 'di', false);
+    for (const p of RING) { place(chips['star' + p], p, 'star', false); place(chips['tian' + p], p, 'tian', false); place(chips['door' + p], p, 'door', false); }
+    place(chips.qin, 5, 'star', false); place(chips.tian5, 5, 'tian', false);
+    QM.GODS.forEach((g, i) => place(chips['god' + i], C.steps.god.start, 'god', false));
+    place(chips.kong, 1, 'badge', false); place(chips.kong2, 1, 'badge', false); place(chips.ma, 1, 'badge2', false);
+  }
+
+  // ── 某阶段完成后的静态状态 ──
+  const ringAt = (home, s) => RING[((RING.indexOf(home) + s) % 8 + 8) % 8];
+  function shortest(n) { return n > 4 ? n - 8 : n; }
+
+  function setStars(s, show) {
+    for (const p of RING) {
+      const to = ringAt(p, s);
+      place(chips['star' + p], to, 'star', show);
+      place(chips['tian' + p], to, 'tian', show);
+    }
+    const qTo = ringAt(2, s);
+    place(chips.qin, qTo, 'qin', show);
+    place(chips.tian5, qTo, 'tian2', show);
+  }
+  function setDoors(s, show) { for (const p of RING) place(chips['door' + p], ringAt(p, s), 'door', show); }
+  function setGods(show, count = 8) {
+    const S = C.steps.god; const gi = RING.indexOf(S.start);
+    QM.GODS.forEach((g, i) => {
+      const p = RING[((gi + (S.clockwise ? i : -i)) % 8 + 8) % 8];
+      place(chips['god' + i], show && i < count ? p : S.start, 'god', show && i < count);
+    });
+  }
+  function clearMarks() {
+    cellsAll().forEach((c) => c.classList.remove('hl', 'hot', 'pulse'));
+    Object.values(chips).forEach((c) => c.classList.remove('dim', 'key'));
+    $('paths').innerHTML = '';
+  }
+  function hl(p, cls = 'hl') { $('cell' + p).classList.add(cls); }
+
+  function staticState(k) {
+    clearMarks();
+    const S = C.steps;
+    // 地盘
+    for (let p = 1; p <= 9; p++) place(chips['di' + p], p, p === 5 ? 'diCenter' : 'di', k >= 2);
+    // 九星（阶段 3 显示原位，阶段 4 起转动后位置）
+    const sShift = shortest(S.tian.shift);
+    if (k === 3) { setStars(0, true); place(chips.qin, 5, 'star', true); place(chips.tian5, 5, 'tian', false); for (const p of RING) chips['tian' + p].classList.add('off'); }
+    else setStars(k >= 4 ? sShift : 0, k >= 4);
+    // 八门
+    setDoors(k >= 5 ? shortest(S.door.doorShift) : 0, k >= 3);
+    // 八神
+    setGods(k >= 6);
+    // 空 / 马
+    const kp = C.summary.kongPalaces;
+    place(chips.kong, kp[0], 'badge', k >= 7);
+    place(chips.kong2, kp[1] || kp[0], 'badge', k >= 7 && kp.length > 1);
+    place(chips.ma, C.summary.maPalace, 'badge2', k >= 7);
+    if (k === 3) { const xp = S.xun.xunPalace; hl(xp); chips['star' + xp].classList.add('key'); chips['door' + (xp === 5 ? 2 : xp)].classList.add('key'); }
+    if (k === 4) hl(S.tian.target);
+    if (k === 5) hl(S.door.doorTarget);
+    if (k === 6) hl(S.god.start);
+    if (k === 7) C.patterns.forEach((pt) => pt.palace && hl(pt.palace, 'hot'));
+  }
+
+  // ── 路径绘制 ──
+  const center = (p) => { const [c, r] = POS[p]; return [c * 100 + 50, r * 100 + 50]; };
+  function drawPath(list, upto, labels) {
+    const svg = $('paths');
+    const pts = list.slice(0, upto + 1).map(center);
+    let h = `<polyline points="${pts.map((q) => q.join(',')).join(' ')}"/>`;
+    pts.forEach((q, i) => {
+      h += `<circle cx="${q[0]}" cy="${q[1]}" r="${i === upto ? 4 : 2.5}"/>`;
+      if (labels) h += `<text x="${q[0] + 6}" y="${q[1] - 6}">${labels[i]}</text>`;
+    });
+    svg.innerHTML = h;
+  }
+
+  // ── 各阶段动画（从上一阶段的静态状态出发）──
+  function animate(k, done) {
+    const S = C.steps;
+    if (k === 0 || k === 1) { if (k === 1) { hl(S.ju.ju); $('cell' + S.ju.ju).classList.add('pulse'); } later(900, done); return; }
+    if (k === 2) {
+      const order = S.di.order;
+      order.forEach((o, i) => later(420 * i + 200, () => {
+        place(chips['di' + o.palace], o.palace, o.palace === 5 ? 'diCenter' : 'di', true);
+        cellsAll().forEach((c) => c.classList.remove('hl')); hl(o.palace);
+        drawPath(order.map((x) => x.palace), i);
+      }));
+      later(420 * order.length + 500, done); return;
+    }
+    if (k === 3) {
+      setStars(0, true); place(chips.qin, 5, 'star', true); for (const p of RING) chips['tian' + p].classList.add('off'); chips.tian5.classList.add('off');
+      setDoors(0, true);
+      later(500, () => { hl(S.xun.xunPalace); $('cell' + S.xun.xunPalace).classList.add('pulse'); });
+      later(1100, () => {
+        const xp = S.xun.xunPalace;
+        (xp === 5 ? chips.qin : chips['star' + xp]).classList.add('key');
+        chips['door' + (xp === 5 ? 2 : xp)].classList.add('key');
+      });
+      later(1800, done); return;
+    }
+    if (k === 4) {
+      // 天盘干从地盘浮起，然后整盘转动
+      setStars(0, true); chips.tian5.classList.toggle('off', false);
+      hl(S.tian.target); $('cell' + S.tian.target).classList.add('pulse');
+      const n = shortest(S.tian.shift), dir = Math.sign(n);
+      setMove(320);
+      for (let i = 1; i <= Math.abs(n); i++) later(700 + 380 * i, () => setStars(dir * i, true));
+      later(700 + 380 * Math.abs(n) + 500, done); return;
+    }
+    if (k === 5) {
+      const path = S.door.path;
+      const zhiStart = C.steps.xun.xunName[1];
+      const zi = QM.ZHI.indexOf(zhiStart);
+      const labels = path.map((_, i) => QM.ZHI[(zi + i) % 12]);
+      path.forEach((_, i) => later(450 * i + 200, () => { drawPath(path, i, labels); cellsAll().forEach((c) => c.classList.remove('hl')); hl(path[i] === 5 ? 5 : path[i]); }));
+      const t0 = 450 * path.length + 400;
+      const n = shortest(S.door.doorShift), dir = Math.sign(n);
+      later(t0 - 100, () => { cellsAll().forEach((c) => c.classList.remove('hl')); hl(S.door.doorTarget); });
+      setMove(320);
+      for (let i = 1; i <= Math.abs(n); i++) later(t0 + 380 * i, () => setDoors(dir * i, true));
+      later(t0 + 380 * Math.abs(n) + 500, done); return;
+    }
+    if (k === 6) {
+      hl(S.god.start);
+      for (let i = 1; i <= 8; i++) later(260 * i, () => setGods(true, i));
+      later(260 * 9 + 400, done); return;
+    }
+    if (k === 7) {
+      const kp = C.summary.kongPalaces;
+      later(200, () => place(chips.kong, kp[0], 'badge', true));
+      later(450, () => kp[1] && place(chips.kong2, kp[1], 'badge', true));
+      later(750, () => place(chips.ma, C.summary.maPalace, 'badge2', true));
+      C.patterns.filter((p) => p.palace).forEach((pt, i) => later(1000 + 250 * i, () => hl(pt.palace, 'hot')));
+      later(1300 + 250 * C.patterns.length, done); return;
+    }
+  }
+
+  // ── 讲解文字 ──
+  const P = (p) => `${QM.PALACE[p].gua}${p}宫`;
+  const cn = (n) => '〇一二三四五六七八九'[n];
+  function explain(k) {
+    const S = C.steps, sm = C.summary;
+    const h = (no, t) => `<h2><span class="no">${no + 1}/8</span>${t}</h2>`;
+    let html = '';
+    if (k === -1) html = `<h2>准备好了</h2><p>点“播放”逐步看起局过程，也可以点上面的阶段名直接跳转。</p>`;
+    if (k === 0) html = h(0, '四柱与节气') + `
+      <div class="kv"><div><span>年柱</span><b>${S.pillars.year}</b></div><div><span>月柱</span><b>${S.pillars.month}</b></div><div><span>日柱</span><b>${S.pillars.day}</b></div><div><span>时柱</span><b>${S.pillars.hour}</b></div></div>
+      <p>太阳视黄经 <span class="mono">${S.pillars.sunLon.toFixed(3)}°</span>，正处在<b>${S.pillars.term}</b>（<span class="mono">${S.pillars.termTime}</span> 交节），下一个节气是${S.pillars.nextTerm}（<span class="mono">${S.pillars.nextTermTime}</span>）。</p>
+      <p class="rule">年柱以立春换，月柱以“节”换（每 30° 黄经一个月），日柱由儒略日数对 60 取余，${S.pillars.dayShift ? '本时刻在 23 点后，日柱已算作次日，' : ''}时柱用五鼠遁从日干推出。</p>`;
+    if (k === 1) html = h(1, '阴阳遁与局数') + `
+      <p>${S.pillars.term}在${S.ju.yang ? '冬至之后、夏至之前，用<b>阳遁</b>' : '夏至之后、冬至之前，用<b>阴遁</b>'}。</p>
+      <p>拆补法定三元：日柱 ${S.pillars.day} 往前 ${S.ju.back} 天到最近的甲/己日，符头为 <b>${S.ju.futou}</b>，地支“${S.ju.futou[1]}”属${{ 上元: '子午卯酉', 中元: '寅申巳亥', 下元: '辰戌丑未' }[S.ju.yuan]}，所以是<b>${S.ju.yuan}</b>。</p>
+      <div class="yuan">${['上元', '中元', '下元'].map((y, i) => `<span class="${y === S.ju.yuan ? 'on' : ''}">${y} ${S.ju.tableRow[i]}局</span>`).join('')}</div>
+      <p>查${S.pillars.term}一行得 <b>${S.ju.dun}${cn(S.ju.ju)}局</b>，地盘从${P(S.ju.ju)}起。</p>`;
+    if (k === 2) html = h(2, '布地盘三奇六仪') + `
+      <p>按“戊己庚辛壬癸丁丙乙”的顺序，从${P(S.ju.ju)}放第一个“戊”，${S.ju.yang ? '阳遁按宫数 1→9 顺飞' : '阴遁按宫数 9→1 逆飞'}，九个干填满九宫。红线就是飞宫路线。</p>
+      <p class="mono">${S.di.order.map((o) => o.palace + o.stem).join(' → ')}</p>
+      <p class="rule">六仪代表六个旬首“甲”藏身之处：甲子戊、甲戌己、甲申庚、甲午辛、甲辰壬、甲寅癸。乙丙丁是三奇。</p>`;
+    if (k === 3) html = h(3, '旬首、值符、值使') + `
+      <p>时柱 ${S.pillars.hour} 在 <b>${S.xun.xunName}</b> 旬，甲遁于六仪“${S.xun.xunYi}”。地盘上“${S.xun.xunYi}”在${P(S.xun.xunPalace)}。</p>
+      <p>该宫原本的星是<b>值符 · ${S.xun.zhifuStar}</b>，原本的门是<b>值使 · ${S.xun.zhishiDoor}</b>（加下划线的两个）。${S.xun.xunPalace === 5 ? '旬首落中五宫，值符取天禽，值使取寄宫坤二的死门。' : ''}</p>
+      <p class="rule">此时九星、八门都还在各自的本宫：蓬1 芮2 冲3 辅4 禽5 心6 柱7 任8 英9；休1 死2 伤3 杜4 开6 惊7 生8 景9。旬空 ${S.xun.kong.join('')}。</p>`;
+    if (k === 4) html = h(4, '转天盘（九星）') + `
+      <p>时干是“${S.tian.hourGan}”${S.tian.hourGan === '甲' ? `，甲不入盘，用旬首六仪“${S.tian.leadStem}”代替` : ''}。它在地盘${P(S.tian.targetRaw)}${S.tian.targetRaw === 5 ? '，中五寄坤二' : ''}，于是值符${S.xun.zhifuStar}要转到<b>${P(S.tian.target)}</b>。</p>
+      <p>九星沿外圈（坎→艮→震→巽→离→坤→兑→乾）整体转动 <b>${Math.abs(shortest(S.tian.shift))}</b> 格${shortest(S.tian.shift) < 0 ? '（逆向更近）' : ''}，每颗星带着原宫的地盘干一起走，这就是天盘干。天禽随天芮同行。</p>
+      ${S.tian.shift === 0 ? '<p><b>九星未动，是伏吟盘。</b></p>' : S.tian.shift === 4 ? '<p><b>九星转到对宫，是反吟盘。</b></p>' : ''}`;
+    if (k === 5) html = h(5, '转人盘（八门）') + `
+      <p>值使${S.xun.zhishiDoor}从旬首宫${P(S.xun.xunPalace)}出发，旬首地支“${S.xun.xunName[1]}”数到时支“${S.pillars.hour[1]}”共 <b>${S.door.stepsN}</b> 步，${S.ju.yang ? '阳遁顺' : '阴遁逆'}着宫数飞：</p>
+      <p class="mono">${S.door.path.join(' → ')}${S.door.doorTargetRaw === 5 ? '（中五寄坤二）' : ''}</p>
+      <p>值使落<b>${P(S.door.doorTarget)}</b>，其余七门沿外圈跟着转 ${Math.abs(shortest(S.door.doorShift))} 格。</p>`;
+    if (k === 6) html = h(6, '排八神') + `
+      <p>八神的“值符”跟随值符星，落在${P(S.god.start)}，然后${S.god.clockwise ? '阳遁顺时针' : '阴遁逆时针'}依次排：值符、腾蛇、太阴、六合、白虎、玄武、九地、九天。</p>
+      <p class="rule">有的门派把白虎、玄武写作勾陈、朱雀，含义相通。</p>`;
+    if (k === 7) html = h(7, '空亡、驿马与格局') + `
+      <p>时旬空亡在 ${sm.kong.join('、')}，落${sm.kongPalaces.map(P).join('、')}；时支${S.pillars.hour[1]}的驿马在${sm.ma}，落${P(sm.maPalace)}。</p>
+      ${C.patterns.length ? `<ul class="pat">${C.patterns.map((pt) => `<li><span class="tag ${pt.kind}">${pt.kind}</span><span><b>${pt.name}</b> ${pt.palace ? P(pt.palace) + '：' : ''}${pt.why}</span></li>`).join('')}</ul>` : '<p>未识别到常见特殊格局。</p>'}
+      <p>完整盘面已经整理成下方文字，可以直接复制给 AI 解读。</p>`;
+    $('explain').innerHTML = html;
+  }
+
+  // ── 阶段控制 ──
+  const stagesEl = $('stages');
+  STAGES.forEach((name, i) => {
+    const li = document.createElement('li');
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = `${i + 1} ${name}`;
+    b.addEventListener('click', () => { stopPlay(); jump(i); });
+    li.appendChild(b); stagesEl.appendChild(li);
+  });
+  function markStages() {
+    [...stagesEl.querySelectorAll('button')].forEach((b, i) => {
+      b.classList.toggle('done', i < stage);
+      if (i === stage) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+    });
+    $('prev').disabled = stage <= -1;
+    $('next').disabled = stage >= STAGES.length - 1;
+  }
+  function jump(k) {
+    clearTimers(); setMove(0);
+    stage = k; staticState(k); explain(k); markStages();
+    requestAnimationFrame(() => setMove(320));
+  }
+  function step(onDone) {
+    if (stage >= STAGES.length - 1) { onDone && onDone(false); return; }
+    clearTimers(); setMove(0);
+    staticState(stage);
+    const k = stage + 1;
+    stage = k; explain(k); markStages();
+    requestAnimationFrame(() => { setMove(320); animate(k, () => onDone && onDone(true)); });
+  }
+  function play() {
+    if (stage >= STAGES.length - 1) jump(-1);
+    playing = true; $('play').textContent = '暂停';
+    const go = () => { if (!playing) return; step((more) => { if (!playing) return; if (more && stage < STAGES.length - 1) later(500, go); else stopPlay(); }); };
+    go();
+  }
+  function stopPlay() { playing = false; $('play').textContent = stage >= STAGES.length - 1 ? '重播' : '播放'; }
+  $('play').addEventListener('click', () => { if (playing) { stopPlay(); clearTimers(); jump(stage); } else play(); });
+  $('next').addEventListener('click', () => { stopPlay(); step(); });
+  $('prev').addEventListener('click', () => { stopPlay(); jump(Math.max(-1, stage - 1)); });
+
+  // ── 输出文本 ──
+  function renderText() { $('out').textContent = QM.toText(C, $('q').value); }
+  $('q').addEventListener('input', () => C && renderText());
+  $('copy').addEventListener('click', () => {
+    const t = $('out').textContent;
+    const ok = () => { $('copy').textContent = '已复制'; setTimeout(() => ($('copy').textContent = '复制文本'), 1600); };
+    const fallback = () => { const r = document.createRange(); r.selectNodeContents($('out')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $('copy').textContent = '已选中，按 Ctrl+C 复制'; };
+    try { navigator.clipboard.writeText(t).then(ok, fallback); } catch (e) { fallback(); }
+  });
+
+  // ── 起局 ──
+  const pad = (n) => String(n).padStart(2, '0');
+  function beijingNow() {
+    const d = new Date(Date.now() + 8 * 3600e3);
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+  }
+  function make(autoplay) {
+    const v = $('dt').value; if (!v) return;
+    const [ds, ts] = v.split('T'); const [y, m, d] = ds.split('-').map(Number); const [hh, mm] = ts.split(':').map(Number);
+    stopPlay(); clearTimers();
+    C = QM.chart(y, m, d, hh, mm);
+    build(); renderText();
+    if (autoplay) { jump(-1); setTimeout(play, 60); } else jump(STAGES.length - 1);
+  }
+  $('now').addEventListener('click', () => { $('dt').value = beijingNow(); make(true); });
+  $('form').addEventListener('submit', (e) => { e.preventDefault(); make(true); });
+
+  $('dt').value = beijingNow();
+  make(false); // 打开时先显示完整的当前时盘，点“播放”看过程
+  $('play').textContent = '从头播放';
+})();
+</script>
+</body>
+</html>
