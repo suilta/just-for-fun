@@ -1,0 +1,21 @@
+{
+  "name": "sanshi",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "三式排盘：奇门遁甲、大六壬、太乙神数，分阶段动画并生成可交给 AI 解读的盘面文字",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node tests/rules.test.js"
+  },
+  "dependencies": {
+    "solid-js": "^1.9.18"
+  },
+  "devDependencies": {
+    "vite": "^6.4.6",
+    "vite-plugin-singlefile": "^2.3.4",
+    "vite-plugin-solid": "^2.11.15"
+  }
+}

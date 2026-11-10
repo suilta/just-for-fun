@@ -1,0 +1,25 @@
+/* 首页：一段说明 + 三张卡片 + 选用与可靠性说明 */
+.home { max-width: 1080px; margin: 0 auto; display: grid; gap: 36px; padding-block: 4vh 2vh; }
+.hero { text-align: center; display: grid; gap: 10px; justify-items: center; }
+.hero h1 { font-size: clamp(56px, 16vw, 112px); font-weight: 900; letter-spacing: .3em; margin-right: -.3em; line-height: 1.05; }
+.hero .lead { margin: 0; font-family: var(--f-display); font-size: clamp(16px, 2.6vw, 20px); letter-spacing: .3em; color: var(--muted); }
+.hero .intro { margin: 8px 0 0; max-width: 60ch; color: var(--ink); }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 860px) { .cards { grid-template-columns: minmax(0, 1fr); } }
+.card { --c: var(--accent); display: grid; gap: 10px; align-content: start; padding: 22px 20px 18px; border: 1px solid var(--line); border-top: 4px solid var(--c);
+  border-radius: 10px; background: var(--surface); color: var(--ink); text-decoration: none; transition: transform .2s, box-shadow .2s, border-color .2s; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 0, 0, .08); border-color: var(--c); }
+.card .name { font-family: var(--f-display); font-weight: 900; font-size: 28px; letter-spacing: .12em; color: var(--c); }
+.card .good { font-size: 15px; line-height: 1.7; }
+.card .asks { font-size: 13px; color: var(--muted); line-height: 1.7; }
+.card .how { font-size: 12.5px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 8px; }
+.card .card-go { justify-self: start; font-weight: 700; color: var(--c); }
+.card.qm { --c: #2c5a86; } .card.lr { --c: #6b3fa0; } .card.ty { --c: #2f6b4f; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .card.qm { --c: #84aedb; } :root:not([data-theme="light"]) .card.lr { --c: #b99be0; } :root:not([data-theme="light"]) .card.ty { --c: #7cc4a0; } }
+:root[data-theme="dark"] .card.qm { --c: #84aedb; } :root[data-theme="dark"] .card.lr { --c: #b99be0; } :root[data-theme="dark"] .card.ty { --c: #7cc4a0; }
+.notes { max-width: 70ch; margin: 0 auto; display: grid; gap: 10px; }
+.notes h2 { font-size: 20px; margin-top: 8px; }
+.notes p { margin: 0; line-height: 1.8; }
+.notes b { color: var(--accent); }
+.notes .fine { font-size: 13px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } }

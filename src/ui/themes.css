@@ -1,0 +1,39 @@
+/* 三式各自的配色：奇门靛青，六壬紫，太乙青绿。由 <html data-art="…"> 选择。 */
+:root[data-art="qimen"] {
+  --bg: #e9eeec; --surface: #f7f9f8; --cell: #fbfcfb; --ink: #17212a; --muted: #5a6870; --line: #c4cfcc;
+  --accent: #2c5a86; --gold: #9a6f12; --cinnabar: #b0362a; --jade: #2f7a5c; --hl: rgba(44, 90, 134, .14);
+}
+:root[data-art="liuren"] {
+  --bg: #ecebe6; --surface: #f8f7f3; --cell: #fcfbf8; --ink: #1d1f24; --muted: #64666b; --line: #cfccc2;
+  --accent: #6b3fa0; --gold: #9a6f12; --cinnabar: #b0362a; --jade: #2f7a5c; --hl: rgba(107, 63, 160, .13);
+}
+:root[data-art="taiyi"] {
+  --bg: #e8ece8; --surface: #f7f9f6; --cell: #fcfdfb; --ink: #1b221d; --muted: #5f6b63; --line: #c6d0c8;
+  --accent: #2f6b4f; --gold: #9a6f12; --cinnabar: #b0362a; --indigo: #3a4f8c; --plum: #8a3f72; --hl: rgba(47, 107, 79, .13);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-art="qimen"]:not([data-theme="light"]) {
+    --bg: #0e1418; --surface: #151e24; --cell: #19242b; --ink: #e1e8e6; --muted: #8fa0a7; --line: #2b3a42;
+    --accent: #84aedb; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(132, 174, 219, .16);
+  }
+  :root[data-art="liuren"]:not([data-theme="light"]) {
+    --bg: #131217; --surface: #1b1a20; --cell: #201f26; --ink: #e7e5ea; --muted: #9d9aa5; --line: #34323c;
+    --accent: #b99be0; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(185, 155, 224, .16);
+  }
+  :root[data-art="taiyi"]:not([data-theme="light"]) {
+    --bg: #101512; --surface: #171e1a; --cell: #1c241f; --ink: #e2e9e4; --muted: #95a39a; --line: #2e3a33;
+    --accent: #7cc4a0; --gold: #d9b25e; --cinnabar: #e8705f; --indigo: #93a8e6; --plum: #d590c0; --hl: rgba(124, 196, 160, .15);
+  }
+}
+:root[data-art="qimen"][data-theme="dark"] {
+  --bg: #0e1418; --surface: #151e24; --cell: #19242b; --ink: #e1e8e6; --muted: #8fa0a7; --line: #2b3a42;
+  --accent: #84aedb; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(132, 174, 219, .16);
+}
+:root[data-art="liuren"][data-theme="dark"] {
+  --bg: #131217; --surface: #1b1a20; --cell: #201f26; --ink: #e7e5ea; --muted: #9d9aa5; --line: #34323c;
+  --accent: #b99be0; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(185, 155, 224, .16);
+}
+:root[data-art="taiyi"][data-theme="dark"] {
+  --bg: #101512; --surface: #171e1a; --cell: #1c241f; --ink: #e2e9e4; --muted: #95a39a; --line: #2e3a33;
+  --accent: #7cc4a0; --gold: #d9b25e; --cinnabar: #e8705f; --indigo: #93a8e6; --plum: #d590c0; --hl: rgba(124, 196, 160, .15);
+}

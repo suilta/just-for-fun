@@ -1,0 +1,52 @@
+/* 大六壬十二宫天地盘 */
+.lr { display: grid; gap: 8px; }
+.lr .chip.badge.me {background: var(--accent); }
+.lr .grid {position: absolute; inset: 0; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 4px; }
+.lr .cell {position: relative; background: var(--cell); border: 1px solid var(--line); border-radius: 6px; transition: background .3s, box-shadow .3s, opacity .4s; }
+.lr .cell .tag {position: absolute; left: 5px; bottom: 3px; font-size: 10px; color: var(--muted); letter-spacing: .05em; }
+.lr .cell.hl {background: var(--hl); box-shadow: inset 0 0 0 2px var(--accent); }
+.lr .cell.hot {box-shadow: inset 0 0 0 2px var(--cinnabar); }
+.lr .cell.pulse {animation: pulse 1s ease-in-out 2; }
+.lr .center {grid-column: 2 / 4; grid-row: 2 / 4; display: grid; align-content: center; justify-items: center; gap: 6px; padding: 4px; text-align: center; min-width: 0; }
+.lr .board.dial .cell {opacity: .3; }
+.lr .board.dial .center {opacity: 0; }
+.lr .board.done .cell {box-shadow: inset 0 0 0 1px var(--gold); }
+.lr .ke4 {display: flex; flex-direction: row-reverse; gap: clamp(4px, 1.2vw, 10px); }
+.lr .ke {display: grid; justify-items: center; gap: 0; min-width: clamp(30px, 6vw, 44px); padding: 2px 0; border-radius: 4px; transition: opacity .45s ease, transform .45s ease; }
+.lr .ke.pend, .lr .chuan div.pend {opacity: 0; transform: translateY(6px); }
+.lr .ke .g {font-size: clamp(9px, 1.5vw, 12px); color: var(--gold); min-height: 1.3em; }
+.lr .ke .u {font-family: var(--f-display); font-weight: 900; font-size: clamp(18px, 3.4vw, 26px); color: var(--accent); line-height: 1.15; }
+.lr .ke .d {font-family: var(--f-display); font-weight: 700; font-size: clamp(15px, 2.8vw, 21px); line-height: 1.15; border-top: 1px solid var(--line); padding-top: 2px; }
+.lr .ke .n {font-size: clamp(9px, 1.4vw, 11px); color: var(--muted); }
+.lr .ke .x {font-size: clamp(9px, 1.4vw, 11px); color: var(--cinnabar); min-height: 1.3em; font-weight: 700; }
+.lr .ke.on {background: var(--hl); }
+.lr .method {font-family: var(--f-display); font-weight: 900; color: var(--cinnabar); font-size: clamp(13px, 2.2vw, 16px); min-height: 1.4em; }
+.lr .chuan {display: grid; gap: 1px; font-size: clamp(11px, 1.9vw, 14px); }
+.lr .chuan div {display: grid; grid-template-columns: 2.2em 1.4em 1.4em 3em 3em; gap: 4px; align-items: baseline; transition: opacity .45s ease, transform .45s ease; }
+.lr .method {transition: opacity .45s ease; }
+.lr .method.pend {opacity: 0; }
+.lr .chuan .p {color: var(--muted); font-size: .85em; }
+.lr .chuan .z {font-family: var(--f-display); font-weight: 900; color: var(--accent); font-size: 1.25em; }
+.lr .chuan .dg {color: var(--muted); }
+.lr .chuan .gn {color: var(--gold); }
+.lr .chuan .q {color: var(--ink); }
+.lr .chuan .q.k {color: var(--cinnabar); }
+.lr .paths .arrow {fill: none; stroke: var(--cinnabar); stroke-width: 2; opacity: .7; marker-end: url(#ah); }
+.lr .paths #ah path {fill: var(--cinnabar); }
+.lr .paths .dialg text {fill: var(--muted); font-family: var(--f-display); font-size: 9px; }
+.lr .paths .dialg .ring {fill: none; stroke: var(--line); stroke-width: 1.2; }
+.lr .paths .dialg .tick {stroke: var(--muted); stroke-width: 1; }
+.lr .paths .dialg .major {stroke: var(--accent); stroke-width: 2; }
+.lr .paths .dialg .sun {fill: var(--gold); }
+.lr .paths .dialg .sunglow {fill: var(--gold); opacity: .25; }
+.lr .paths .dialg .arc {fill: none; stroke: var(--gold); stroke-width: 3; opacity: .7; }
+.lr .paths .dialg .now {fill: var(--ink); font-size: 15px; font-weight: 700; }
+.lr .paths .dialg .jiang {fill: var(--accent); font-size: 12px; font-weight: 700; }
+.lr .chip.off {opacity: 0; transform: translate(-50%, -50%) scale(.6); }
+.lr .chip.di {font-family: var(--f-display); font-weight: 700; color: var(--muted); font-size: clamp(13px, 2.3vw, 18px); }
+.lr .chip.tian {font-family: var(--f-display); font-weight: 900; color: var(--accent); font-size: clamp(22px, 4.2vw, 34px); }
+.lr .chip.tian.key {color: var(--cinnabar); }
+.lr .chip.gen {color: var(--gold); font-size: clamp(11px, 1.9vw, 14px); font-weight: 600; }
+.lr .chip.dun {color: var(--muted); font-size: clamp(10px, 1.7vw, 13px); }
+.lr .chip.badge {font-size: 10px; color: var(--surface); background: var(--cinnabar); padding: 1px 4px; border-radius: 3px; }
+@media (prefers-reduced-motion: reduce) { .lr .cell, .lr .ke, .lr .chuan div, .lr .counter { transition: none !important; animation: none !important; } }

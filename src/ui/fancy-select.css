@@ -1,0 +1,17 @@
+.fs { position: relative; }
+.fs-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; font: inherit;
+  color: var(--ink); background: var(--cell); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; cursor: pointer; }
+.fs-btn:hover { border-color: var(--accent); }
+.fs-btn .fs-cur { min-width: 0; }
+.fs-btn .fs-chev { flex: none; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg) translateY(-2px); transition: transform .2s; }
+.fs.open .fs-chev { transform: rotate(-135deg) translateY(-2px); }
+.fs-list { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20; margin: 0; padding: 4px; list-style: none;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .14); max-height: 60vh; overflow: auto; }
+.fs-opt { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 2px 8px; padding: 8px 10px; border-radius: 6px; cursor: pointer; outline: none; }
+.fs-opt + .fs-opt { margin-top: 2px; }
+.fs-opt:hover, .fs-opt.active { background: var(--hl); }
+.fs-opt .fs-dot { grid-row: 1 / 3; align-self: start; margin-top: 4px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line); }
+.fs-opt[aria-selected="true"] .fs-dot { border-color: var(--accent); background: radial-gradient(var(--accent) 45%, transparent 50%); }
+.fs-opt .fs-name { font-weight: 700; color: var(--ink); line-height: 1.4; }
+.fs-opt .fs-desc { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+@media (prefers-reduced-motion: reduce) { .fs-btn .fs-chev { transition: none; } }

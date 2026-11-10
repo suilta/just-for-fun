@@ -1,10 +1,13 @@
 /*
- * 规则测试：node tests.js
+ * 规则测试：npm test
  * 每条规则用独立写的检查逻辑，对大量随机时刻逐一核对，不复用被测代码里的取传函数。
  */
-'use strict';
-const QM = require('./qimen.js');
-const LR = require('./liuren.js');
+import * as astro from '../src/core/astro.js';
+import * as cal from '../src/core/calendar.js';
+import * as qimen from '../src/arts/qimen/core.js';
+import * as LR from '../src/arts/liuren/core.js';
+import * as TY from '../src/arts/taiyi/core.js';
+const QM = { ...astro, ...cal, ...qimen };
 
 let pass = 0, fail = 0;
 const failures = [];
@@ -174,7 +177,6 @@ for (let i = 0; i < N; i++) {
 check('三合次序', [9, 1, 7].map((z) => Z[mod(z + 4, 12)]).join('') === '丑巳亥');
 
 // ── 太乙神数：《太乙统宗宝鉴》卷四、卷五岁计局例 ──
-const TY = require('./taiyi.js');
 // [公元年（天文纪年）, 原书标注, 局, 太乙宫, 文昌, 主算, 始击, 客算, 原书所列格局（本页已实现者）]
 // 秦代两例：
 // - 原书“秦始皇六年庚申……六十九局”：史事属前 241 年，但 69 局数值只与下一个庚申年（前 121 年）吻合，属原书内部冲突，按前 121 年回归。
