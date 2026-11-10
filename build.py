@@ -3,12 +3,13 @@
 
     index.html  -> dist/qimen.html   （奇门遁甲）
     liuren.html -> dist/liuren.html  （大六壬）
+    taiyi.html  -> dist/taiyi.html   （太乙神数）
 """
 import re
 from pathlib import Path
 
 root = Path(__file__).parent
-PAGES = {"index.html": "qimen.html", "liuren.html": "liuren.html"}
+PAGES = {"index.html": "qimen.html", "liuren.html": "liuren.html", "taiyi.html": "taiyi.html"}
 
 
 def inline(match):

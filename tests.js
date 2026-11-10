@@ -173,6 +173,43 @@ for (let i = 0; i < N; i++) {
 // 别责阴日例：酉取丑、丑取巳、未取亥
 check('三合次序', [9, 1, 7].map((z) => Z[mod(z + 4, 12)]).join('') === '丑巳亥');
 
+// ── 太乙神数：《太乙统宗宝鉴》卷四、卷五岁计局例 ──
+const TY = require('./taiyi.js');
+// [公元年（天文纪年）, 原书标注, 局, 太乙宫, 文昌, 主算, 始击, 客算, 原书所列格局（本页已实现者）]
+// 秦代两例：调研表标为“秦始皇六年庚申”“秦始皇三十年辛卯”，按干支实为前 121 年庚申、前 210 年辛卯，原书数据与之完全吻合。
+const TY_CASES = [
+  [630, '唐贞观四年庚寅', 27, 1, '艮', 31, '卯', 28, ['囚']],
+  [830, '唐太和四年庚戌', 11, 4, '卯', 4, '丑', 4, ['关', '囚']],
+  [213, '汉建安十八年癸巳', 42, 7, '亥', 27, '辰', 12, ['迫', '提挟（疑似）']],
+  [877, '唐乾符四年丁酉', 58, 4, '乾', 12, '未', 26, []],
+  [918, '梁贞明四年戊寅', 27, 1, '艮', 31, '卯', 28, ['囚']],
+  [-120, '庚申（表标秦始皇六年）', 69, 8, '午', 16, '艮', 32, ['击', '格']],
+  [385, '晋宁康十年乙酉', 70, 9, '未', 30, '卯', 4, ['迫', '提挟（疑似）']],
+  [-118, '汉元狩四年壬戌', 71, 9, '坤', 29, '巳', null, ['击', '囚']],
+  [-209, '辛卯（表标秦始皇三十年）', 52, 2, '未', 39, null, null, ['迫']],
+  [-73, '汉元平元年丁未', 44, 8, '丑', null, null, null, ['迫']],
+];
+for (const [yr, label, kook, gong, wc, home, sf, away, pats] of TY_CASES) {
+  const c = TY.cast(yr, 6, 1, 12, 0, { ji: 'sui' });
+  const b = c.board, got = new Set(c.steps.pats.map((p) => p.name));
+  const tag = `${label}：得 ${c.steps.ju.kook}局 ${b.taiyi}宫 文昌${b.wc} 主${c.steps.cal.home} 始击${b.sf} 客${c.steps.cal.away}`;
+  check('太乙局', c.steps.ju.kook === kook && c.steps.ju.yang, tag);
+  check('太乙宫', b.taiyi === gong, tag);
+  check('太乙文昌', b.wc === wc, tag);
+  if (home !== null) check('太乙主算', c.steps.cal.home === home, tag);
+  if (sf !== null) check('太乙始击', b.sf === sf, tag);
+  if (away !== null) check('太乙客算', c.steps.cal.away === away, tag);
+  for (const p of pats) check('太乙格局 ' + p, got.has(p), tag + ' 格局' + [...got].join(''));
+}
+// 2026-11-10 14:30 调研演算
+{
+  const s = TY.cast(2026, 11, 10, 14, 30, { ji: 'sui' }), b = s.board, C2 = s.steps.cal;
+  check('太乙2026岁计', s.steps.ju.kook === 55 && b.taiyi === 3 && b.wc === '申' && b.js === '申' && b.he === '未' && b.sf === '艮' && C2.home === 16 && C2.hg === 6 && C2.hv === 8 && C2.away === 3 && C2.ag === 3 && C2.av === 9);
+  const t = TY.cast(2026, 11, 10, 14, 30), bt = t.board, Ct = t.steps.cal;
+  check('太乙2026时计', t.steps.ju.acc === 8496685016 && t.steps.ju.kook === 8 && !t.steps.ju.yang && bt.taiyi === 7 && bt.wc === '未' && bt.js === '丑' && bt.he === '午' && bt.sf === '坤' && Ct.home === 1 && Ct.hg === 1 && Ct.hv === 3 && Ct.away === 7 && Ct.ag === 7 && Ct.av === 1);
+  check('太乙大将整十', TY.general(30) === 3 && TY.general(40) === 4 && TY.general(16) === 6 && TY.vgen(6) === 8);
+}
+
 console.log(`课体分布（${N} 课）：`, seen);
 console.log(failures.join('\n'));
 console.log(`\n通过 ${pass}，失败 ${fail}`);
