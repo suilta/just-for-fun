@@ -37,3 +37,19 @@
   --bg: #101512; --surface: #171e1a; --cell: #1c241f; --ink: #e2e9e4; --muted: #95a39a; --line: #2e3a33;
   --accent: #7cc4a0; --gold: #d9b25e; --cinnabar: #e8705f; --indigo: #93a8e6; --plum: #d590c0; --hl: rgba(124, 196, 160, .15);
 }
+
+/* 八字：赭石 */
+:root[data-art="bazi"] {
+  --bg: #efebe4; --surface: #faf7f2; --cell: #fdfbf7; --ink: #221d17; --muted: #6a6157; --line: #d5ccbe;
+  --accent: #8a5a1f; --gold: #9a6f12; --cinnabar: #b0362a; --jade: #2f7a5c; --hl: rgba(138, 90, 31, .12);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-art="bazi"]:not([data-theme="light"]) {
+    --bg: #15120e; --surface: #1d1914; --cell: #231e18; --ink: #ece5da; --muted: #a59a8b; --line: #3a3229;
+    --accent: #d6a865; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(214, 168, 101, .14);
+  }
+}
+:root[data-art="bazi"][data-theme="dark"] {
+  --bg: #15120e; --surface: #1d1914; --cell: #231e18; --ink: #ece5da; --muted: #a59a8b; --line: #3a3229;
+  --accent: #d6a865; --gold: #d9b25e; --cinnabar: #e8705f; --jade: #6cc39c; --hl: rgba(214, 168, 101, .14);
+}

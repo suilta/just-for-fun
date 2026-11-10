@@ -7,6 +7,7 @@ import * as cal from '../src/core/calendar.js';
 import * as qimen from '../src/arts/qimen/core.js';
 import * as LR from '../src/arts/liuren/core.js';
 import * as TY from '../src/arts/taiyi/core.js';
+import * as BZ from '../src/arts/bazi/core.js';
 const QM = { ...astro, ...cal, ...qimen };
 
 let pass = 0, fail = 0;
@@ -224,6 +225,29 @@ for (const [yr, label, kook, gong, wc, home, sf, away, pats] of TY_CASES) {
   const t = TY.cast(2026, 11, 10, 14, 30), bt = t.board, Ct = t.steps.cal;
   check('太乙2026时计', t.steps.ju.acc === 8496685016 && t.steps.ju.kook === 8 && !t.steps.ju.yang && bt.taiyi === 7 && bt.wc === '未' && bt.js === '丑' && bt.he === '午' && bt.sf === '坤' && Ct.home === 1 && Ct.hg === 1 && Ct.hv === 3 && Ct.away === 7 && Ct.ag === 7 && Ct.av === 1);
   check('太乙大将整十', TY.general(30) === 3 && TY.general(40) === 4 && TY.general(16) === 6 && TY.vgen(6) === 8);
+}
+
+// ── 八字 ──
+{
+  // 公开资料：毛泽东 1893-12-26 辰时，癸巳 甲子 丁酉 甲辰，阴年男命逆排，八岁起运，首运癸亥
+  const c = BZ.cast(1893, 12, 26, 8, 0, { gender: 'm' });
+  check('八字四柱', c.steps.pillars.names.join(' ') === '癸巳 甲子 丁酉 甲辰', c.steps.pillars.names.join(' '));
+  check('八字大运逆排', !c.steps.dayun.forward && c.steps.dayun.list.slice(0, 3).map((r) => r.gz).join() === '癸亥,壬戌,辛酉');
+  check('八字起运虚岁8', c.steps.dayun.startAge === 8, String(c.steps.dayun.startAge));
+  check('八字十神', c.pillars.map((p) => p.shishen).join() === '七杀,正印,日主,正印');
+  check('八字藏干', c.pillars[3].cang.map((x) => x.gan + x.shishen).join() === '戊伤官,乙偏印,癸七杀');
+  check('八字纳音', c.pillars.map((p) => p.nayin).join() === '长流水,海中金,山下火,覆灯火');
+  check('八字长生', c.pillars.map((p) => p.cs).join() === '帝旺,绝,长生,衰', c.pillars.map((p) => p.cs).join());
+  check('八字空亡胎元', c.steps.extra.dayKong.join('') === '辰巳' && c.steps.extra.taiyuan === '乙卯');
+  // 阳年女命逆排、阴年女命顺排
+  check('八字阴年女顺排', BZ.cast(2000, 1, 1, 12, 0, { gender: 'f' }).steps.dayun.forward);
+  check('八字阳年女逆排', !BZ.cast(2026, 11, 10, 12, 0, { gender: 'f' }).steps.dayun.forward);
+  // 夜子时：0 点换日时，23:30 日柱仍为当天，时柱取次日子时；23 点换日则日柱进一日
+  const n0 = BZ.cast(2026, 11, 10, 23, 30, { dayChange: 0 }).steps.pillars.names, n23 = BZ.cast(2026, 11, 10, 23, 30).steps.pillars.names;
+  check('八字夜子时', n0[2] === '戊子' && n0[3] === '甲子' && n23[2] === '己丑' && n23[3] === '甲子', n0.join(' ') + ' / ' + n23.join(' '));
+  // 十神与长生全表抽查
+  check('十神全表', '甲乙丙丁戊己庚辛壬癸'.split('').map((g, i) => BZ.shishen(0, i)).join('') === '比肩劫财食神伤官偏财正财七杀正官偏印正印');
+  check('长生阳顺阴逆', BZ.changsheng(0, 11) === '长生' && BZ.changsheng(0, 3) === '帝旺' && BZ.changsheng(1, 6) === '长生' && BZ.changsheng(1, 2) === '帝旺');
 }
 
 console.log(`课体分布（${N} 课）：`, seen);

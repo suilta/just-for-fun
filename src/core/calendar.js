@@ -46,10 +46,12 @@ export function fourPillars(y, m, d, h, mi, opts) {
 
   // 时柱：五鼠遁
   const hourZhi = Math.floor((clock.h + 1) / 2) % 12;
-  const hourGan = mod((dayIdx % 10 % 5) * 2 + hourZhi, 10);
+  // 时柱：五鼠遁。0 点换日时，23 点后的“夜子时”日柱仍用当天，时干按次日子时起（甲己日夜子为丙子）
+  const nightZi = o.dayChange !== 23 && clock.h >= 23 ? 1 : 0;
+  const hourGan = mod(((dayIdx + nightZi) % 10 % 5) * 2 + hourZhi, 10);
   const hourIdx = sixtyIndex(hourGan, hourZhi);
 
-  return { jd, lon, yearIdx, monthIdx, dayIdx, hourIdx, dayShift, dayNum, clock, offsetMin, eot };
+  return { jd, lon, yearIdx, monthIdx, dayIdx, hourIdx, dayShift, nightZi, dayNum, clock, offsetMin, eot };
 }
 
 

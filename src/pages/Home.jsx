@@ -22,6 +22,15 @@ const CARDS = [
   },
 ];
 
+const MINGLI = [
+  {
+    id: 'bazi', name: '八字', verb: '排盘', tone: 'bz',
+    good: '看一个人的命局：以出生时刻排出四柱，看日主强弱、十神配置与大运流年。',
+    asks: ['我适合什么方向', '这几年运势如何', '性格上的长处和短板'],
+    how: '四柱、十神、藏干、纳音、十二长生，精确起运排大运。',
+  },
+];
+
 export default function Home() {
   onMount(() => { document.title = '三式排盘'; });
   return (
@@ -42,9 +51,24 @@ export default function Home() {
           </a>
         )}</For>
       </section>
+      <section class="group">
+        <h2>命理</h2>
+        <p>三式问事，命理看人。命理以出生时刻排盘，看的是一个人的大致格局和各阶段的起伏。</p>
+      </section>
+      <section class="cards" aria-label="命理">
+        <For each={MINGLI}>{(c) => (
+          <a class={'card ' + c.tone} href={'#' + c.id}>
+            <span class="name">{c.name}</span>
+            <span class="good">{c.good}</span>
+            <span class="asks">适合问：{c.asks.join('；')}</span>
+            <span class="how">{c.how}</span>
+            <span class="card-go">去{c.verb} ›</span>
+          </a>
+        )}</For>
+      </section>
       <section class="notes">
         <h2>怎么选</h2>
-        <p>想知道<b>什么时候、往哪里</b>做一件事，用奇门；心里有<b>一件具体的事</b>要问，在想问的那一刻用六壬；想看<b>一段时间的大势</b>或双方胜负，用太乙。三式都不是用来断一生命运的，问得越具体，盘越好读。</p>
+        <p>想知道<b>什么时候、往哪里</b>做一件事，用奇门；心里有<b>一件具体的事</b>要问，在想问的那一刻用六壬；想看<b>一段时间的大势</b>或双方胜负，用太乙。三式都不是用来断一生命运的，问得越具体，盘越好读；想了解<b>一个人的整体命局</b>，用八字。</p>
         <h2>排盘有多可靠</h2>
         <p>节气用天文算法计算，交节时刻和已知值吻合到分钟。各式的规则都先查古籍定下口径，在页面上写明采用哪一派；再用古籍课例和成熟排盘软件的结果写成自动测试逐项核对。各家有分歧的地方做成了设置项，并会告诉你这个选项对你填的时间有没有影响。</p>
         <p class="fine">排盘只是按规则推演，解读也只是传统术数的一种看法，请把它当作参考，不要替代现实中的判断。</p>
