@@ -2,6 +2,7 @@
  * 塔罗：外壳所需的说明与设置项。塔罗不按时间起盘，起始页不显示时间。
  */
 import { cast, toText, DEFAULT_OPTS, SPREADS } from './core.js';
+import { DECK } from './cards.js';
 import * as board from './board.js';
 
 const summary = (o) => `${SPREADS[o.spread]?.name || ''} · ${o.reversed ? '含逆位' : '不含逆位'}`;
@@ -47,6 +48,9 @@ export default {
     { type: 'note', key: 'scope', text: '洗牌使用浏览器的加密级随机数；牌由你在扇形牌堆中亲手抽出，跳过动画时由程序随机补齐。牌面为本站自绘，牌序按韦特体系。' },
   ],
   cast: (a, o) => cast(...a, o),
+  // 起盘记录：牌序、正逆、切牌与所抽的牌
+  snapshot: (C) => ({ deck: C.deck.map((d) => [d.card.id, d.reversed ? 1 : 0]), cut: C.cut, cutOrder: C.cutOrder, picks: C.picks, autoFilled: !!C.autoFilled, at: +C.at }),
+  restore: (C, s) => Object.assign(C, { deck: s.deck.map(([id, r]) => ({ card: DECK[id], reversed: !!r })), cut: s.cut, cutOrder: s.cutOrder, picks: [...s.picks], autoFilled: s.autoFilled, at: new Date(s.at) }),
   text: toText,
   footer: (C) => `本次设置：${summary(C.opts)}。洗牌使用加密级随机数（Fisher–Yates），切牌位置与叠回顺序也随机。${C.autoFilled ? '部分牌为跳过动画后程序随机补齐。' : '所有牌均由你亲手抽出。'}关键词为简短提示，不是完整释义。`,
   impacts: () => ({}),

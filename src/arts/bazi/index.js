@@ -31,6 +31,7 @@ export default {
   timeLabel: '出生时间（北京时间）',
   placeholder: '想了解哪方面，写在这里。例如：这几年的事业方向',
   castWord: '排盘',
+  birth: true, // 出生盘：从记录再排时沿用原来的时间
   textName: '命盘原文',
   processName: '排盘过程',
   settingsLabel: '排盘设置',

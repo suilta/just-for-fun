@@ -26,3 +26,12 @@
 .notes b { color: var(--accent); }
 .notes .fine { font-size: 13px; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } }
+
+.hero .today { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; margin-top: 6px; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); text-decoration: none; font-size: 14px; }
+.hero .today:hover { border-color: var(--accent); }
+.hero .today span + span { color: var(--muted); }
+.hero-links { display: flex; gap: 18px; font-size: 14px; }
+.hero-links a { color: var(--accent); text-decoration: none; }
+.hero-links a:hover { text-decoration: underline; }
+@media (max-width: 480px) { .hero .today { border-radius: 12px; } }

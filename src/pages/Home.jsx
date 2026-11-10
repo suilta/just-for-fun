@@ -1,4 +1,7 @@
-import { For, onMount } from 'solid-js';
+import { For, Show, onMount } from 'solid-js';
+import { dayInfo, termsOfYear } from '../core/almanac.js';
+import { loadHistory } from '../ui/history.js';
+import { beijingNow } from '../ui/anim.js';
 import './home.css';
 
 const CARDS = [
@@ -67,14 +70,31 @@ const WEST = [
   },
 ];
 
+/** 首页顶部的今日一行：农历、干支、下一个节气 */
+function todayLine() {
+  const n = beijingNow(), [y, m, d] = [+n.slice(0, 4), +n.slice(5, 7), +n.slice(8, 10)];
+  const I = dayInfo(y, m, d);
+  const key = n.slice(0, 10);
+  const next = [...termsOfYear(y), ...termsOfYear(y + 1)].find((t) => t.date > key);
+  return { I, next, term: I.term };
+}
+
 export default function Home() {
   onMount(() => { document.title = '观象 · 排盘动画'; });
+  const T = todayLine();
+  const nHist = loadHistory().length;
   return (
     <main class="home fade-in">
       <header class="hero">
         <h1>观象</h1>
         <p class="lead">排盘动画 · 中西术数</p>
         <p class="intro">“仰以观于天文，俯以察于地理。”这里把奇门、六壬、太乙、八字、易卦、塔罗与星盘的排盘过程一步步做成动画：节气、干支、宫位、星辰怎么推出来，一眼看得见。排完会生成一段完整的盘面文字，可以交给 AI 或懂行的人解读。</p>
+        <a class="today" href="#calendar">
+          <span>今天 {T.I.m} 月 {T.I.d} 日 · 农历{T.I.lunar?.monthName}{T.I.lunar?.dayName}</span>
+          <span>{T.I.pillars.year}年 {T.I.pillars.month}月 {T.I.pillars.day}日</span>
+          <span>{T.term ? `今日${T.term.name} ${T.term.time}` : `下一节气 ${T.next.name} ${+T.next.date.slice(5, 7)}月${+T.next.date.slice(8)}日`}</span>
+        </a>
+        <nav class="hero-links"><a href="#calendar">农历日历</a><a href="#history">起盘记录<Show when={nHist}>（{nHist}）</Show></a></nav>
       </header>
       <section class="group">
         <h2>三式</h2>

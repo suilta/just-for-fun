@@ -19,6 +19,8 @@ import { placeOf, CITIES } from '../src/arts/natal/places.js';
 import { natalImpacts } from '../src/arts/natal/impacts.js';
 import * as Astro from 'astronomy-engine';
 import { readFileSync } from 'node:fs';
+import * as AL from '../src/core/almanac.js';
+import { plain } from '../src/ui/history.js';
 const QM = { ...astro, ...cal, ...qimen };
 
 let pass = 0, fail = 0;
@@ -434,6 +436,39 @@ for (const [yr, label, kook, gong, wc, home, sf, away, pats] of TY_CASES) {
     const im = natalImpacts([1990, 6, 15, 12, 30], { ...NA.DEFAULT_OPTS, extra: true }, x);
     check('影响说明 ' + JSON.stringify(x), im.zodiac && im.node && im.orbs && (x.tk === 'no' || im.house));
   }
+}
+
+// ── 农历日历 ──
+{
+  // 节日与公布的日期对照
+  const F = { '2024-02-10': '春节', '2025-01-29': '春节', '2026-02-17': '春节', '2027-02-06': '春节',
+    '2024-09-17': '中秋节', '2025-10-06': '中秋节', '2026-09-25': '中秋节', '2025-05-31': '端午节', '2026-06-19': '端午节',
+    '2025-01-28': '除夕', '2026-02-16': '除夕', '2024-02-09': '除夕', '2026-03-03': '元宵节', '2025-08-29': '七夕',
+    '2026-05-10': '母亲节', '2026-06-21': '父亲节', '2026-10-01': '国庆节', '2026-10-18': '重阳节' };
+  for (const [k, f] of Object.entries(F)) { const [y, m, d] = k.split('-').map(Number); check(`节日 ${k} ${f}`, AL.dayInfo(y, m, d).fest.includes(f), AL.dayInfo(y, m, d).fest.join()); }
+  // 闰六月不过七月节：2025 闰六月十五不是中元节
+  check('闰月不过节', !AL.dayInfo(2025, 8, 8).fest.includes('中元节') && AL.dayInfo(2025, 8, 8).lunar.leap);
+  // 节气时刻（北京时间，与紫金山天文台公布值一致到分钟）
+  const T = { 立春: ['2026-02-04', '04:02'], 清明: ['2026-04-05', '02:39'], 夏至: ['2026-06-21', '16:24'], 冬至: ['2026-12-22', '04:50'] };
+  for (const [n, [d, t]] of Object.entries(T)) { const x = AL.termsOfYear(2026).find((e) => e.name === n); check(`节气 ${n}`, x.date === d && x.time === t, `${x.date} ${x.time}`); }
+  check('每年 24 节气按序', [2000, 2033, 2050].every((y) => { const ts = AL.termsOfYear(y); return ts.length === 24 && ts.every((t, i) => i === 0 || t.jd > ts[i - 1].jd) && ts[0].name === '小寒' && ts[23].name === '冬至'; }));
+  // 月相：每月 3–5 次，四相依次轮转
+  for (let m = 1; m <= 12; m++) { const ps = AL.phasesOfMonth(2026, m); check(`月相 2026-${m}`, ps.length >= 3 && ps.length <= 5); }
+  const nov = AL.phasesOfMonth(2026, 11);
+  check('2026-11 朔', nov.some((p) => p.name === '朔' && p.date === '2026-11-09'));
+  // 朔日即农历初一
+  for (let m = 1; m <= 12; m++) for (const p of AL.phasesOfMonth(2027, m).filter((x) => x.name === '朔')) {
+    const [y, mm, d] = p.date.split('-').map(Number); check(`朔日为初一 ${p.date}`, AL.dayInfo(y, mm, d).lunar.day === 1);
+  }
+  // 月历格子
+  for (let y = 2024; y <= 2027; y++) for (let m = 1; m <= 12; m++) {
+    const g = AL.monthGrid(y, m), inM = g.filter((c) => c.inMonth);
+    check(`月历 ${y}-${m}`, (g.length === 35 || g.length === 42) && g[0].weekday === 1 && inM.length === new Date(Date.UTC(y, m, 0)).getUTCDate() && inM[0].d === 1);
+  }
+  // 立春当天年柱换年
+  const lc = AL.dayInfo(2026, 2, 4);
+  check('立春换年柱', lc.yearChange && lc.yearChange.from === '乙巳' && lc.yearChange.to === '丙午');
+  check('摘要转纯文字', plain('<span>甲 <b>乙</b></span>&amp;') === '甲 乙 &');
 }
 
 console.log(`课体分布（${N} 课）：`, seen);

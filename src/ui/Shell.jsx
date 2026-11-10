@@ -3,6 +3,7 @@ import { createStore } from 'solid-js/store';
 import FancySelect from './FancySelect.jsx';
 import { createScheduler, beijingNow, parseDt, esc } from './anim.js';
 import { renderShareCard } from './share.js';
+import { saveRecord, getRecord, plain } from './history.js';
 
 /**
  * 三式共用的外壳：起式页（时间、所问、设置）→ 自动播放各阶段动画（可跳过）→ 结果（原文 / 过程）。
@@ -39,6 +40,8 @@ export default function Shell(props) {
   const [sealOn, setSealOn] = createSignal(false);
   const [shot, setShot] = createSignal(null); // 生成的分享图（data URL）
   const [shotBusy, setShotBusy] = createSignal(false);
+  const [saved, setSaved] = createSignal(null); // 本次起盘存入记录的结果：id 或 'fail'
+  const [fromRecord, setFromRecord] = createSignal(null); // 正在查看的记录
 
   const impacts = createMemo(() => {
     const a = parseDt(dt());
@@ -46,7 +49,7 @@ export default function Shell(props) {
     try { return art.impacts(a, { ...opts }, { ...extras }) || {}; } catch (e) { return {}; }
   });
 
-  let host, ctrl = null, C = null, runToken = 0, q = '';
+  let host, ctrl = null, C = null, runToken = 0, q = '', castDt = '', pendingSave = false;
 
   const show = (k) => {
     setCaption(art.board.caption(C, k, q));
@@ -81,13 +84,41 @@ export default function Shell(props) {
     // 有交互的步骤（如塔罗抽牌）会在过程中改变结果，结束时重新生成文字
     setOut(art.text(C, q)); setFoot(art.footer(C));
     setPhase('result'); setTab('raw');
+    if (pendingSave) {
+      pendingSave = false;
+      const id = saveRecord({ art: art.id, name: art.name, dt: castDt, q, opts: { ...opts }, extras: { ...extras },
+        snap: art.snapshot ? art.snapshot(C) : null, meta: plain(art.board.meta(C, art.stages.length - 1)), text: out() });
+      setSaved(id || 'fail');
+    }
   }
-  function again() { runToken++; sched.clear(); setPhase('intro'); setDt(beijingNow()); window.scrollTo({ top: 0 }); }
+  function again() {
+    runToken++; sched.clear(); setPhase('intro'); setSaved(null);
+    if (fromRecord()) { setFromRecord(null); setOpts(load()); history.replaceState(null, '', '#' + art.id); }
+    setDt(art.birth && castDt ? castDt : beijingNow()); window.scrollTo({ top: 0 });
+  }
+  function replay() { setSaved(null); ritual(); }
+
+  /** 套用一条记录的设置与输入（不改动本机保存的默认设置） */
+  function applyRecord(rec) {
+    setOpts(art.parseOpts(Object.assign({}, art.defaults, rec.opts || {})));
+    for (const k in rec.extras || {}) setExtras(k, rec.extras[k]);
+    setQuestion(rec.q || '');
+  }
+  function openRecord(rec) {
+    applyRecord(rec); setFromRecord(rec);
+    const a = parseDt(rec.dt); if (!a) return;
+    castDt = rec.dt; q = rec.q || ''; pendingSave = false;
+    C = art.cast(a, { ...opts }, { ...extras });
+    if (art.restore && rec.snap) art.restore(C, rec.snap);
+    ctrl = art.board.mount(host, C, sched);
+    finish();
+  }
 
   function onSubmit(e) {
     e.preventDefault();
-    const a = parseDt(art.noTime ? beijingNow() : dt()); if (!a) return;
-    q = question().trim();
+    castDt = art.noTime ? beijingNow() : dt();
+    const a = parseDt(castDt); if (!a) return;
+    q = question().trim(); pendingSave = true; setSaved(null);
     C = art.cast(a, { ...opts }, { ...extras });
     setOut(art.text(C, q));
     setFoot(art.footer(C));
@@ -111,7 +142,14 @@ export default function Shell(props) {
 
   createEffect(() => { const on = sealOn(); if (ctrl) ctrl.seal(on); });
 
-  onMount(() => { document.documentElement.dataset.art = art.id; document.title = art.title; });
+  onMount(() => {
+    document.documentElement.dataset.art = art.id; document.title = art.title;
+    const R = props.route || {};
+    const rec = R.id ? getRecord(R.id) : null;
+    if (rec && rec.art === art.id && R.mode === 'r') openRecord(rec);
+    else if (rec && rec.art === art.id && R.mode === 'p') { applyRecord(rec); setDt(art.birth ? rec.dt : beijingNow()); }
+    else if (R.dt && parseDt(R.dt)) setDt(R.dt);
+  });
   onCleanup(() => { runToken++; sched.clear(); delete document.documentElement.dataset.art; });
 
   const numVal = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : v; };
@@ -121,7 +159,9 @@ export default function Shell(props) {
     <>
       <header class="top">
         <a class="brand" href="#">观象{phase() !== 'intro' ? ' · ' + art.name : ''}</a>
-        <Show when={phase() === 'ritual'}><button type="button" class="skip" onClick={finish}>跳过 ›</button></Show>
+        <Show when={phase() === 'ritual'} fallback={<nav class="toplinks"><a href="#calendar">日历</a><a href="#history">记录</a></nav>}>
+          <button type="button" class="skip" onClick={finish}>跳过 ›</button>
+        </Show>
       </header>
 
       {/* 第一幕：起式 */}
@@ -243,7 +283,13 @@ export default function Shell(props) {
           <div class="row">
             <button type="button" onClick={again}>{art.againLabel}</button>
             <button type="button" onClick={makeShot} disabled={shotBusy()}>{shotBusy() ? '正在生成…' : '保存图片'}</button>
+            <button type="button" onClick={replay}>重播动画</button>
           </div>
+          <p class="small saved">
+            <Show when={fromRecord()}>{(r) => <>这是 {new Date(r().at).toLocaleString('zh-CN', { hour12: false })} 的起盘记录。</>}</Show>
+            <Show when={saved() && saved() !== 'fail'}>已存入<a href="#history">起盘记录</a>（只存在这台设备的浏览器里）。</Show>
+            <Show when={saved() === 'fail'}>这个浏览器不允许本地存储（可能是无痕模式），本次没有存入记录。</Show>
+          </p>
         </aside>
       </section>
       <Show when={shot()}>

@@ -11,7 +11,7 @@ npm test         # 规则测试（古籍课例、外部软件对照、随机课�
 npm run build    # 打包成一个独立的 dist/index.html
 ```
 
-`dist/index.html` 不依赖任何外部资源，直接放到网站上即可。地址后加 `#qimen`、`#liuren`、`#taiyi`、`#bazi`、`#meihua`、`#liuyao`、`#xiaoliuren`、`#tarot`、`#natal` 可直达对应页面。
+`dist/index.html` 不依赖任何外部资源，直接放到网站上即可。地址后加 `#qimen`、`#liuren`、`#taiyi`、`#bazi`、`#meihua`、`#liuyao`、`#xiaoliuren`、`#tarot`、`#natal` 可直达对应页面；`#calendar` 为农历日历，`#history` 为起盘记录。
 
 ## 结构
 
@@ -34,7 +34,9 @@ src/
     FancySelect.jsx 带说明的下拉
     anim.js        动画时间轴（定时器与逐帧补间，可一次取消）
     share.js       盘面截图：把盘面排成卡片导出 PNG（html-to-image）
-  pages/Home.jsx   首页
+  pages/Home.jsx   首页（含今日农历与下一节气）
+  pages/History.jsx 起盘记录（ui/history.js 存取，只存在本机浏览器）
+  pages/Calendar.jsx 农历日历（core/almanac.js：农历、干支、节气与月相时刻、节日）
 tests/rules.test.js
 tests/fixtures/natal-swe.json  本命盘对照数据（Swiss Ephemeris 生成）
 ```

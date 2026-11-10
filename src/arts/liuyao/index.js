@@ -47,6 +47,9 @@ export default {
     { type: 'note', key: 'scope', text: '京房纳甲体系：八宫世应、纳甲、六亲、六神、伏神、变卦、月建日辰旬空。只起卦，不断吉凶；卦身、进退神、反吟伏吟等不排。' },
   ],
   cast: (a, o) => cast(...a, o),
+  // 起盘记录：六次摇钱的结果
+  snapshot: (C) => ({ tosses: C.tosses, autoFilled: !!C.autoFilled }),
+  restore: (C, s) => Object.assign(C, { tosses: s.tosses.map((t) => ({ ...t })), autoFilled: s.autoFilled }),
   text: toText,
   footer: (C) => `本卦设置：${summary(C.opts)}。${C.opts.method === 'coins' ? (C.autoFilled ? '部分爻为跳过动画后程序随机补齐。' : '六次均由你亲手摇出。') : ''}摇钱使用加密级随机数。`,
   impacts(a, o) {

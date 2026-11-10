@@ -59,6 +59,11 @@ button.primary:hover:not(:disabled) { color: var(--surface); filter: brightness(
 .brand { font-family: var(--f-display); font-weight: 900; letter-spacing: .3em; font-size: 15px; color: var(--muted); text-decoration: none; }
 .brand:hover { color: var(--accent); }
 .skip { font-size: 13px; padding: 6px 16px; border-radius: 999px; }
+.toplinks { display: flex; gap: 16px; font-size: 14px; }
+.toplinks a { color: var(--muted); text-decoration: none; }
+.toplinks a:hover { color: var(--accent); }
+.saved { margin: 0; }
+.saved a { color: var(--accent); }
 
 /* 起式页 */
 .intro { display: grid; place-items: center; padding-block: 2vh 6vh; }
