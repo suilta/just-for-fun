@@ -148,17 +148,6 @@ button.primary:hover:not(:disabled) { color: var(--surface); filter: brightness(
 .stages button { padding: 4px 9px; font-size: 13px; }
 .stages button[aria-current="step"] { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 
-/* 解读 */
-.reading .ask { font-family: var(--f-display); font-size: 18px; }
-.reading .ask span { color: var(--muted); font-size: 12px; font-family: var(--f-body); display: block; letter-spacing: .14em; }
-.answer { line-height: 1.85; max-width: 64ch; }
-.answer h3 { font-size: 17px; margin: 18px 0 4px; color: var(--accent); }
-.answer h3:first-child { margin-top: 0; }
-.answer p { margin: 0 0 8px; }
-.answer ul { margin: 0 0 8px; padding-left: 1.2em; }
-.answer strong { color: var(--cinnabar); font-weight: 700; }
-.thinking { display: flex; align-items: center; gap: 10px; color: var(--muted); }
-.thinking i { width: 20px; height: 20px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .small { font-size: 12.5px; color: var(--muted); max-width: 70ch; margin: 0; }
 pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: var(--f-mono); font-size: 12.5px; line-height: 1.7; background: var(--cell); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; max-height: 560px; overflow: auto; }
@@ -188,7 +177,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
       </div>
       <button type="submit" class="primary" id="go"><span>起局</span></button>
     </form>
-    <p class="hint">所问之事可以不填，不填就解读整体时运。</p>
+    <p class="hint">所问之事会写进盘面原文，排完后可以复制给 AI 解读。</p>
   </div>
 </section>
 
@@ -209,20 +198,13 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   <aside class="side">
     <div class="progress" id="progress"></div>
     <div class="tabs" id="tabs" role="tablist" hidden>
-      <button type="button" role="tab" data-tab="reading" aria-selected="true">解读</button>
+      <button type="button" role="tab" data-tab="raw" aria-selected="true">盘面原文</button>
       <button type="button" role="tab" data-tab="process" aria-selected="false">排盘过程</button>
-      <button type="button" role="tab" data-tab="raw" aria-selected="false">盘面原文</button>
     </div>
 
     <div class="pane" id="pane-process">
       <ol class="stages" id="stages" hidden></ol>
       <div class="explain" id="explain" aria-live="polite"></div>
-    </div>
-
-    <div class="pane reading" id="pane-reading" hidden>
-      <div class="ask" id="ask"></div>
-      <div id="answerBox"></div>
-      <div class="row" id="readingCtl"></div>
     </div>
 
     <div class="pane" id="pane-raw" hidden>
@@ -246,8 +228,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   const SLOT = { god: [.2, .17], tian: [.8, .17], tian2: [.6, .17], star: [.5, .43], qin: [.5, .62], door: [.22, .8], di: [.8, .8], badge: [.5, .17], badge2: [.5, .3], diCenter: [.5, .5] };
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const STAGES = ['四柱节气', '阴阳定局', '布地盘', '旬首值符', '转天盘', '转人盘', '排八神', '空马格局'];
-  const READ_MS = [3200, 3800, 1800, 2600, 2200, 2400, 1600, 3000]; // 每幕动画后留给阅读的时间
-
+  
   let C = null, stage = -1, timers = [], runToken = 0, question = '';
   const chips = {};
 
@@ -361,7 +342,7 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   // 各幕动画：从上一幕的静态盘面出发，完成后调用 done
   function animate(k, done) {
     const S = C.steps;
-    if (k === 0) { later(600, done); return; }
+    if (k === 0) { later(1200, done); return; }
     if (k === 1) { later(500, () => { hl(S.ju.ju); $('cell' + S.ju.ju).classList.add('pulse'); }); later(1600, done); return; }
     if (k === 2) {
       const order = S.di.order;
@@ -503,7 +484,6 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   function showTab(t) {
     for (const b of $('tabs').querySelectorAll('button')) b.setAttribute('aria-selected', String(b.dataset.tab === t));
     $('pane-process').hidden = t !== 'process';
-    $('pane-reading').hidden = t !== 'reading';
     $('pane-raw').hidden = t !== 'raw';
   }
   $('tabs').addEventListener('click', (e) => {
@@ -518,10 +498,9 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     setPhase('ritual');
     $('theater').classList.remove('fade-in'); void $('theater').offsetWidth; $('theater').classList.add('fade-in');
     jump(-1);
-    await wait(1600); if (my !== runToken) return;
+    await wait(500); if (my !== runToken) return;
     for (let k = 0; k < STAGES.length; k++) {
       await playStage(k); if (my !== runToken) return;
-      await wait(READ_MS[k]); if (my !== runToken) return;
     }
     finish();
   }
@@ -529,89 +508,12 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
     runToken++; clearTimers();
     jump(7);
     setPhase('result');
-    showTab('reading');
-    startReading();
+    showTab('raw');
   }
   $('skip').addEventListener('click', finish);
-  $('again').addEventListener('click', () => { abortReading(); runToken++; clearTimers(); setPhase('intro'); $('dt').value = beijingNow(); });
-
-  // ── 解读：在 claude.ai 上直接请 Claude 解盘；其他环境退回到复制原文 ──
-  let samplePromise = null, ctl = null;
-  function getSample() {
-    if (!samplePromise) samplePromise = (window.claude && typeof window.claude.use === 'function') ? Promise.resolve(window.claude.use('sample')).catch(() => null) : Promise.resolve(null);
-    return samplePromise;
-  }
-  getSample();
-  function abortReading() { if (ctl) { try { ctl.abort(); } catch (e) { /* ignore */ } } ctl = null; }
+  $('again').addEventListener('click', () => { runToken++; clearTimers(); setPhase('intro'); $('dt').value = beijingNow(); });
 
   function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-  function md(src) {
-    const out = []; let list = false;
-    const inline = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    for (const raw of src.split('\n')) {
-      const line = raw.trim();
-      const li = line.match(/^[-*•]\s+(.*)/) || line.match(/^\d+[.、]\s*(.*)/);
-      if (!li && list) { out.push('</ul>'); list = false; }
-      if (!line) continue;
-      const hd = line.match(/^#{1,4}\s*(.*)/);
-      if (hd) out.push(`<h3>${inline(hd[1])}</h3>`);
-      else if (li) { if (!list) { out.push('<ul>'); list = true; } out.push(`<li>${inline(li[1])}</li>`); }
-      else out.push(`<p>${inline(line)}</p>`);
-    }
-    if (list) out.push('</ul>');
-    return out.join('');
-  }
-  function readingPrompt() {
-    return [
-      '你是一位精通时家奇门遁甲的老师。下面是一张已经排好的奇门盘（程序按转盘、拆补法排出，盘面数据可信，不要重新排盘）。',
-      '请用简体中文给出解读，面向普通人，语气沉稳，不故弄玄虚。',
-      '格式要求：只用以下五个小标题，每个标题单独一行并以“## ”开头，标题下用短段落或“- ”列表，总长度 600 到 900 字：',
-      '## 用神', '## 盘面要点', '## 断语', '## 建议', '## 应期与提醒',
-      '“用神”说明选了哪个星、门、干作用神以及原因；“断语”先给一句明确的结论，再说理由；“应期与提醒”的最后一句说明这只是传统术数的参考，不能替代现实判断。',
-      '', QM.toText(C, question),
-    ].join('\n');
-  }
-  const ERR = {
-    not_granted: '没有获得调用 Claude 的许可，所以无法在这里解读。可以切到“盘面原文”，复制给任何 AI。',
-    sampling_disabled: '这个账号目前不能在页面里调用 Claude。可以切到“盘面原文”，复制给 AI。',
-    rate_limited: '调用太频繁或已达到用量上限，请稍后再试。',
-    session_expired: '登录已过期，请重新登录 claude.ai 后再试。',
-    refused: 'Claude 没有回答这个问题，可以换个问法重新起局。',
-    empty_completion: '这次没有得到回答，可以再试一次。',
-  };
-  const PERMANENT = ['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'];
-  async function startReading() {
-    abortReading();
-    $('ask').innerHTML = `<span>所问之事</span>${question ? esc(question) : '整体时运'}`;
-    const box = $('answerBox'), row = $('readingCtl');
-    box.innerHTML = '<div class="thinking"><i></i><span>正在解盘…</span></div>'; row.innerHTML = '';
-    const sample = await getSample();
-    if (!sample) {
-      box.innerHTML = '<p class="small">当前环境无法直接调用 Claude（例如在本地打开了这个页面）。盘已经排好，请切到“盘面原文”，复制给任何 AI 解读。</p>';
-      return;
-    }
-    const my = new AbortController(); ctl = my;
-    const stop = document.createElement('button'); stop.type = 'button'; stop.textContent = '停止';
-    stop.onclick = abortReading; row.appendChild(stop);
-    const answer = document.createElement('div'); answer.className = 'answer';
-    let code = null;
-    try {
-      const { truncated } = await sample(readingPrompt(), {
-        signal: my.signal,
-        onText: ({ text }) => { if (!answer.isConnected) { box.innerHTML = ''; box.appendChild(answer); } answer.innerHTML = md(text); },
-      });
-      row.innerHTML = truncated ? '<p class="small">解读被截断了，可以重新解读。</p>' : '';
-    } catch (e) {
-      code = (e && e.code) || 'upstream_error';
-      row.innerHTML = '';
-      if (e && e.text) { box.innerHTML = ''; box.appendChild(answer); answer.innerHTML = md(e.text); }
-      else box.innerHTML = code === 'cancelled' ? '<p class="small">已停止。</p>' : '';
-      if (code !== 'cancelled') { const p = document.createElement('p'); p.className = 'small'; p.textContent = ERR[code] || '连接中断了，可以再试一次。'; row.appendChild(p); }
-    } finally { if (ctl === my) ctl = null; }
-    if (PERMANENT.includes(code)) return;
-    const again = document.createElement('button'); again.type = 'button'; again.textContent = '重新解读';
-    again.onclick = startReading; row.appendChild(again);
-  }
 
   // ── 原文 ──
   $('copy').addEventListener('click', () => {
