@@ -125,7 +125,8 @@ button.primary:hover:not(:disabled) { color: var(--surface); filter: brightness(
 .paths text { fill: var(--cinnabar); font-family: var(--f-mono); font-size: 9px; }
 .chips { position: absolute; inset: 0; pointer-events: none; }
 .chip { position: absolute; transform: translate(-50%, -50%) scale(1); white-space: nowrap; line-height: 1.1;
-  transition: left var(--mv, .32s) ease-in-out, top var(--mv, .32s) ease-in-out, opacity .35s, transform .35s; }
+  transition: left var(--mv, .32s) var(--ease, ease-in-out), top var(--mv, .32s) var(--ease, ease-in-out), opacity .35s, transform .35s; }
+.chip { will-change: left, top, opacity; }
 .chip.off { opacity: 0; transform: translate(-50%, -50%) scale(.6); }
 .chip.star { font-family: var(--f-display); font-weight: 700; color: var(--gold); font-size: clamp(14px, 2.5vw, 20px); }
 .chip.qin { font-family: var(--f-display); color: var(--gold); font-size: clamp(10px, 1.7vw, 13px); }
@@ -289,7 +290,20 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   }
   function place(el, p, slot, show = true) { const [x, y] = xy(p, slot); el.style.left = x + '%'; el.style.top = y + '%'; el.classList.toggle('off', !show); }
   const later = (ms, fn) => timers.push(setTimeout(fn, reduce ? 20 : ms));
-  function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+  let rafs = [];
+  function clearTimers() { timers.forEach(clearTimeout); timers = []; rafs.forEach(cancelAnimationFrame); rafs = []; }
+  // 逐帧补间：fn(进度 0..1)，可被 clearTimers 取消
+  function tween(ms, fn, done) {
+    if (reduce) { fn(1); done && done(); return; }
+    const t0 = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - t0) / ms); fn(t);
+      if (t < 1) rafs.push(requestAnimationFrame(tick)); else if (done) done();
+    };
+    rafs.push(requestAnimationFrame(tick));
+  }
+  const easeInOut = (t) => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  function setEase(e) { document.documentElement.style.setProperty('--ease', e); }
   function setMove(ms) { document.documentElement.style.setProperty('--mv', (reduce ? 0 : ms / 1000) + 's'); }
 
   function build() {
@@ -370,17 +384,20 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
       h += `<line class="tick" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
       h += `<text x="${tx.toFixed(1)}" y="${(ty + 2.5).toFixed(1)}" text-anchor="middle">${JQ_ALL[i]}</text>`;
     }
-    const start = from == null ? lon : from;
-    const sweep = ((lon - start) % 360 + 360) % 360;
-    if (sweep > 0.5) {
-      const [ax, ay] = dialPt(start, 118), [bx, by] = dialPt(lon, 118);
-      h += `<path class="arc" d="M${ax.toFixed(1)},${ay.toFixed(1)} A118,118 0 ${sweep > 180 ? 1 : 0} 0 ${bx.toFixed(1)},${by.toFixed(1)}"/>`;
-    }
-    const [sx, sy] = dialPt(lon, 118);
-    h += `<circle class="sunglow" cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="11"/><circle class="sun" cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="6"/>`;
+    h += '<path class="arc" id="darc" d=""/><circle class="sunglow" id="dglow" r="11"/><circle class="sun" id="dsun" r="6"/>';
     h += `<text class="now" x="150" y="146" text-anchor="middle">${C.steps.pillars.term}</text>`;
-    h += `<text x="150" y="160" text-anchor="middle">太阳黄经 ${lon.toFixed(1)}°</text></g>`;
+    h += '<text x="150" y="160" text-anchor="middle" id="dlon"></text></g>';
     $('paths').innerHTML = h;
+    setSun(lon, from == null ? lon : from);
+  }
+  // 只更新太阳、弧线和读数（黄经增大在屏幕上是顺时针，SVG sweep-flag = 1）
+  function setSun(lon, from) {
+    const [sx, sy] = dialPt(lon, 118);
+    for (const id of ['dsun', 'dglow']) { const c = $(id); c.setAttribute('cx', sx.toFixed(2)); c.setAttribute('cy', sy.toFixed(2)); }
+    const sweep = ((lon - from) % 360 + 360) % 360;
+    const [ax, ay] = dialPt(from, 118);
+    $('darc').setAttribute('d', sweep > 0.2 ? `M${ax.toFixed(2)},${ay.toFixed(2)} A118,118 0 ${sweep > 180 ? 1 : 0} 1 ${sx.toFixed(2)},${sy.toFixed(2)}` : '');
+    $('dlon').textContent = `太阳黄经 ${(((lon % 360) + 360) % 360).toFixed(1)}°`;
   }
 
   const center = (p) => { const [c, r] = POS[p]; return [c * 100 + 50, r * 100 + 50]; };
@@ -398,9 +415,10 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   function animate(k, done) {
     const S = C.steps;
     if (k === 0) {
-      const lon = S.pillars.sunLon, from = lon - 105, N = 30;
-      for (let i = 0; i <= N; i++) later(60 * i, () => drawDial(from + (lon - from) * (1 - Math.pow(1 - i / N, 3)), from));
-      later(60 * N + 1400, done); return;
+      const lon = S.pillars.sunLon, from = lon - 105;
+      drawDial(from, from);
+      tween(2200, (t) => setSun(from + (lon - from) * easeInOut(t), from), () => later(1200, done));
+      return;
     }
     if (k === 1) {
       $('paths').innerHTML = ''; $('board').classList.remove('dial');
@@ -433,10 +451,10 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
       void $('chips').offsetWidth; setMove(500);
       later(200, () => { for (const p of RING) place(chips['tian' + p], p, 'tian', true); });
       later(900, () => { hl(2); place(chips.qin, 2, 'qin', true); place(chips.tian5, 2, 'tian2', true); });
-      later(1900, () => { cellsAll().forEach((c) => c.classList.remove('hl')); hl(S.tian.target); $('cell' + S.tian.target).classList.add('pulse'); setMove(330); });
+      later(1900, () => { cellsAll().forEach((c) => c.classList.remove('hl')); hl(S.tian.target); $('cell' + S.tian.target).classList.add('pulse'); setMove(360); setEase('linear'); });
       const n = S.tian.shift;
-      for (let i = 1; i <= n; i++) later(2300 + 360 * i, () => setStars(i, true));
-      later(2300 + 360 * n + 600, done); return;
+      for (let i = 1; i <= n; i++) later(2300 + 360 * (i - 1), () => setStars(i, true));
+      later(2300 + 360 * n + 500, () => { setEase('ease-in-out'); done(); }); return;
     }
     if (k === 5) {
       const path = S.door.path;
@@ -446,9 +464,9 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
       const t0 = 480 * path.length + 500;
       const n = S.door.doorShift;
       later(t0 - 100, () => { cellsAll().forEach((c) => c.classList.remove('hl')); hl(S.door.doorTarget); });
-      setMove(330);
-      for (let i = 1; i <= n; i++) later(t0 + 360 * i, () => setDoors(i, true));
-      later(t0 + 360 * n + 600, done); return;
+      later(t0, () => { setMove(360); setEase('linear'); });
+      for (let i = 1; i <= n; i++) later(t0 + 360 * (i - 1) + 20, () => setDoors(i, true));
+      later(t0 + 360 * n + 500, () => { setEase('ease-in-out'); done(); }); return;
     }
     if (k === 6) {
       hl(S.god.start);
@@ -541,13 +559,13 @@ pre#out { margin: 0; white-space: pre-wrap; word-break: break-word; font-family:
   });
   function markStages() { [...$('stages').querySelectorAll('button')].forEach((b, i) => (i === stage ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current'))); }
   function jump(k) {
-    clearTimers(); setMove(0);
+    clearTimers(); setMove(0); setEase('ease-in-out');
     stage = k; staticState(k); explain(k); caption(k); showMeta(k); showProgress(k); markStages();
     requestAnimationFrame(() => setMove(380));
   }
   function playStage(k) {
     return new Promise((res) => {
-      clearTimers(); setMove(0); staticState(k - 1);
+      clearTimers(); setMove(0); setEase('ease-in-out'); staticState(k - 1);
       stage = k; explain(k); caption(k); showMeta(k); showProgress(k); markStages();
       requestAnimationFrame(() => { setMove(380); animate(k, res); });
     });
