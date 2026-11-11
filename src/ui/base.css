@@ -93,6 +93,8 @@ button.primary:hover:not(:disabled) { color: var(--surface); filter: brightness(
 .settings[open] summary::after { content: '收起'; }
 .settings summary > span:first-child { white-space: nowrap; }
 .settings .sum { color: var(--ink); text-align: right; min-width: 0; }
+.xfold .opts { padding: 0 12px 12px; }
+.xfold .sum { color: var(--muted); }
 .opts { display: grid; gap: 12px; padding: 4px 12px 14px; }
 .opt { display: grid; gap: 4px; }
 .opt input[type=number] { font: inherit; color: var(--ink); background: var(--cell); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; width: 7em; }

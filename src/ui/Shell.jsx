@@ -152,6 +152,28 @@ export default function Shell(props) {
   });
   onCleanup(() => { runToken++; sched.clear(); delete document.documentElement.dataset.art; });
 
+  const extrasBody = () => (
+    <div class="pair">
+      <For each={art.extras.fields}>{(f) => (
+        <Show when={!f.showIf || f.showIf(extras)}>
+          <div class={'xf' + (f.wide ? ' wide' : '')}>
+            <Show when={f.label}><label class="xl-label" id={'xl-' + f.key} for={'x-' + f.key}>{f.label}</label></Show>
+            <Switch>
+              <Match when={f.type === 'number'}>
+                <input id={'x-' + f.key} type="number" inputmode={f.inputmode === undefined ? 'numeric' : f.inputmode || undefined} min={f.min} max={f.max} step={f.step}
+                  placeholder={f.placeholder} aria-label={f.label ? undefined : f.aria}
+                  value={extras[f.key]} onInput={(e) => setExtras(f.key, e.currentTarget.value)} />
+              </Match>
+              <Match when={f.type === 'select'}>
+                <FancySelect id={'x-' + f.key} labelId={f.label ? 'xl-' + f.key : undefined} value={extras[f.key]} options={f.options} onChange={(v) => setExtras(f.key, v)} />
+              </Match>
+            </Switch>
+          </div>
+        </Show>
+      )}</For>
+      <p class="full">{art.extras.note}</p>
+    </div>
+  );
   const numVal = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : v; };
   const visible = (f) => !f.showIf || f.showIf(opts);
 
@@ -180,29 +202,18 @@ export default function Shell(props) {
               <textarea id="q" rows="2" placeholder={art.placeholder} value={question()} onInput={(e) => setQuestion(e.currentTarget.value)} />
             </div>
             <Show when={art.extras && (!art.extras.showIf || art.extras.showIf(opts))}>
-              <div class="field">
-                <span class="label">{art.extras.label}</span>
-                <div class="pair">
-                  <For each={art.extras.fields}>{(f) => (
-                    <Show when={!f.showIf || f.showIf(extras)}>
-                      <div class={'xf' + (f.wide ? ' wide' : '')}>
-                        <Show when={f.label}><label class="xl-label" id={'xl-' + f.key} for={'x-' + f.key}>{f.label}</label></Show>
-                        <Switch>
-                          <Match when={f.type === 'number'}>
-                            <input id={'x-' + f.key} type="number" inputmode={f.inputmode === undefined ? 'numeric' : f.inputmode || undefined} min={f.min} max={f.max} step={f.step}
-                              placeholder={f.placeholder} aria-label={f.label ? undefined : f.aria}
-                              value={extras[f.key]} onInput={(e) => setExtras(f.key, e.currentTarget.value)} />
-                          </Match>
-                          <Match when={f.type === 'select'}>
-                            <FancySelect id={'x-' + f.key} labelId={f.label ? 'xl-' + f.key : undefined} value={extras[f.key]} options={f.options} onChange={(v) => setExtras(f.key, v)} />
-                          </Match>
-                        </Switch>
-                      </div>
-                    </Show>
-                  )}</For>
-                  <p class="full">{art.extras.note}</p>
+              <Show when={art.extras.fold} fallback={
+                <div class="field">
+                  <span class="label">{art.extras.label}</span>
+                  {extrasBody()}
                 </div>
-              </div>
+              }>
+                {/* 可选输入折叠成一行，点开才显示 */}
+                <details class="settings xfold">
+                  <summary><span>{art.extras.label}</span><span class="sum">{art.extras.fold(extras)}</span></summary>
+                  <div class="opts">{extrasBody()}</div>
+                </details>
+              </Show>
             </Show>
             <details class="settings">
               <summary><span>{art.settingsLabel}</span><span class="sum">{art.optSummary(opts)}</span></summary>

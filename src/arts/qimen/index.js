@@ -73,7 +73,9 @@ export default {
     ...solarFields('用真太阳时定日柱、时柱', '起局地东经', '只影响日柱和时柱。'),
   ],
   extras: {
-    label: '占类与流年',
+    label: '更多：占类、流年、年命',
+    // 折叠显示：大多数情况不必填
+    fold: (x) => (x.topic && x.topic !== 'general') || x.birth ? `${{ xingren: '占行人', budao: '占捕盗', jibing: '占疾病' }[x.topic] || '通用'} · 流年 ${x.year || ''}${x.birth ? ' · ' + x.birth + ' 年生' : ''}` : '可不填',
     note: '四部古籍没有通用的应期公式，应期按占类分别规定。选“通用”时不推应期；行人、捕盗按《秘笈》卷九六庚格，疾病按天芮废月。流年只列太岁与各宫的干支关系。',
     fields: [
       { key: 'topic', type: 'select', initial: 'general', label: '占类', options: [
