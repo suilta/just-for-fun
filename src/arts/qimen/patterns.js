@@ -194,6 +194,9 @@ export function findPatterns(C) {
       const withMen = JIMEN.includes(dr);
       add(p, withMen ? '奇游禄位' : '三奇升殿', '吉', ['各书一致'], `天盘${a.s}${jiT(a)}落${G(q)}${withMen ? '，又合' + dr : ''}`, '《统宗》《秘笈》：“乙奇到震、丙奇到巽、丁奇到离，此为三奇游禄位，若合三吉门，百事大吉。”');
     }
+    // 六仪击刑异本（《宝鉴》附：“一本甲戌加八宫，甲申加四宫，甲寅加二宫亦是”）
+    const XING_YB = { 己: 8, 庚: 4, 癸: 2 };
+    for (const a of q.sky) if (XING_YB[a.s] === p) add(p, a.s === xunYi ? '值符击刑' : '六仪击刑', '凶', ['《宝鉴》所附异本'], `天盘${a.s}${jiT(a)}落${G(q)}`, '《宝鉴》卷一《释击刑》：“一本甲戌加八宫，甲申加四宫，甲寅加二宫亦是。”');
     // 六仪击刑：当旬值符所遁之仪为重
     for (const a of q.sky) if (XING_GONG[a.s] === p) {
       const zf = a.s === xunYi;
@@ -204,7 +207,7 @@ export function findPatterns(C) {
       const says = [];
       if (a.s === '丙' && p === 6) says.push('各书一致（火墓在戌）');
       if (a.s === '丁' && p === 6) says.push('《宝鉴》（火墓在戌）');
-      if (a.s === '丁' && p === 8) says.push('阴阳分论派（阴火墓丑）');
+      if (a.s === '丁' && p === 8) says.push('《统宗·奇门四十格》（丁奇艮宫）');
       if (a.s === '乙' && p === 2) says.push('五行通墓（木墓在未）');
       if (a.s === '乙' && p === 6) says.push('《宝鉴》《统宗》《秘笈》（乙长生午、墓戌）');
       if (says.length) add(p, '三奇入墓', '凶', says, `天盘${a.s}${jiT(a)}落${G(q)}`, '《宝鉴》卷一：“乙木长生在午，墓在戌，又木墓在未；丙火、丁火长生在寅，墓在戌。故乙临二、六宫，丙、丁临六宫，皆名三奇入墓。”');

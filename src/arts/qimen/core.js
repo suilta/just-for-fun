@@ -40,6 +40,7 @@ const ZHI_PALACE = { 子: 1, 丑: 8, 寅: 8, 卯: 3, 辰: 4, 巳: 4, 午: 9, 未
 
 import { keying, keyingText } from './keying.js';
 import { findPatterns } from './patterns.js';
+import { liunian, liunianText } from './liunian.js';
 
 // ───────────────────────── 排盘选项 ─────────────────────────
 const DEFAULT_OPTS = {
@@ -53,6 +54,8 @@ const DEFAULT_OPTS = {
   overlay: true,    // 值符真甲叠加（《烟波》《宝鉴》）
   starState: 'month', // 九星旺衰：month 按月令 / palace 按落宫
   beiJi: false,     // 寄干是否参与悖格判定
+  taisui: 'zhi',    // 太岁宫：zhi 地盘岁支之宫（《统宗》）/ gan 岁干落宫
+  modern: false,    // 现代流年标记法（同宫、六冲标为候选触发）
 };
 const OPT_TEXT = {
   yuan: { chaibu: '拆补法', zhirun: '置闰法', maoshan: '茅山法' },
@@ -228,6 +231,7 @@ function chart(y, m, d, h, mi, opts) {
   // 吉凶格局：按调研资料逐条判定，各说并列
   for (const pt of findPatterns(result)) { patterns.push(pt); if (pt.palace) palaces[pt.palace].notes.push(pt.name); }
   result.keying = o.keying ? keying(result, o) : null;
+  result.liunian = liunian(result, o.ln || {}, o);
   return result;
 }
 
@@ -263,6 +267,7 @@ function toText(c, question) {
   } else L.push('格局提示：未识别到常见特殊格局。');
   L.push('');
   if (c.keying) { L.push(keyingText(c.keying)); L.push(''); }
+  if (c.liunian) { L.push(liunianText(c, c.liunian)); L.push(''); }
   L.push('请你作为熟悉奇门遁甲的解读者，基于以上盘面：');
   L.push('1. 先确定用神（按所问之事选取，如求财看生门与戊、谋事看值符与时干、出行看开门等），说明用神落宫的星、门、神、奇仪及旺衰；');
   L.push('2. 分析用神宫与日干、时干所落宫的生克关系；');

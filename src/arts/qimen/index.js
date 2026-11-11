@@ -63,10 +63,34 @@ export default {
     ], what: '九星与八门不同，用“我生为旺、同行为相、我克为休、生我为废、克我为囚”。' },
     { type: 'check', key: 'beiJi', label: '寄干与悖格', text: '中五寄来的干也参与悖格判定',
       what: '悖格是天盘丙加地盘的年、月、日、时干。中五宫的干寄在别的宫，若值符星正好是带着寄干的那颗星，寄干会随值符每个时辰都落在时干上，整旬每时都成悖格。默认不让寄干参与悖格；其余格局与十干克应仍照算寄干。' },
+    { type: 'select', key: 'taisui', label: '太岁宫', options: [
+      { value: 'zhi', label: '地盘岁支之宫（默认）', desc: '《统宗》：“太岁：地盘岁支之宫。”定义最明确。' },
+      { value: 'gan', label: '岁干落宫', desc: '《秘笈》卷九占法以“岁干为天子”、看岁干所乘之宫。整套切换，不与岁支宫混用。' },
+    ] },
+    { type: 'check', key: 'modern', label: '流年标记', text: '用现代流年标记法，把与太岁同宫、六冲的宫标为“候选触发”',
+      what: '“引动”不是四部古籍的固定术语。默认只列太岁与各宫的冲、合、刑、害等原始关系，不说哪一宫被引动。勾选后按现代做法标出候选，并注明不是古法。' },
     DAY_CHANGE_FIELD('传统时家奇门多用这种。'),
     ...solarFields('用真太阳时定日柱、时柱', '起局地东经', '只影响日柱和时柱。'),
   ],
-  cast: (a, o) => chart(...a, o),
+  extras: {
+    label: '占类与流年',
+    note: '四部古籍没有通用的应期公式，应期按占类分别规定。选“通用”时不推应期；行人、捕盗按《秘笈》卷九六庚格，疾病按天芮废月。流年只列太岁与各宫的干支关系。',
+    fields: [
+      { key: 'topic', type: 'select', initial: 'general', label: '占类', options: [
+        { value: 'general', label: '通用（不推应期）', desc: '只排盘、标格局与克应，并列出流年太岁的干支关系。' },
+        { value: 'xingren', label: '行人', desc: '按《秘笈》卷九六庚格定年、月、日、时应；附《元灵经》伏吟不来、反吟来等说。' },
+        { value: 'budao', label: '捕盗', desc: '按《秘笈》卷九六庚格定年、月、日、时应。' },
+        { value: 'jibing', label: '疾病', desc: '按《元灵经》“天芮废没之月为愈”，只给月份条件。' },
+      ] },
+      { key: 'year', type: 'number', initial: String(new Date().getFullYear()), label: '流年', placeholder: '如 2027', min: 1900, max: 2100, step: 1 },
+      { key: 'birth', type: 'number', initial: '', label: '出生年（年命，可不填）', placeholder: '如 1990', min: 1900, max: 2100, step: 1 },
+      { key: 'mingLayer', type: 'select', initial: 'di', label: '年命落宫看', showIf: (x) => !!x.birth, options: [
+        { value: 'di', label: '地盘年干', desc: '《元灵经·占历任归结》：“以本宫年干地盘为主。”' },
+        { value: 'tian', label: '天盘年干', desc: '《元灵经·占回本乡》：“以天盘年命落宫。”各占类取法不同。' },
+      ] },
+    ],
+  },
+  cast: (a, o, x) => chart(...a, { ...o, ln: x || {} }),
   text: toText,
   footer: (C) => `本盘设置：${summary(C.opts)}。节气用截断 VSOP87 自行计算，误差在 1 分钟以内；真太阳时的均时差用近似式，误差约半分钟。各门派在定局、寄宫、格局判定上有差异，以上设置可在起局页调整。`,
   impacts(a, o) {

@@ -5,14 +5,15 @@
 import { PALACE, RING, STAR_HOME, DOOR_HOME, GODS } from './core.js';
 import { ZHI, JIEQI } from '../../core/calendar.js';
 import { esc } from '../../ui/anim.js';
+import { yearGz, ZHI_PALACE as LN_ZP, liunianText } from './liunian.js';
 import './board.css';
 
 const QM = { PALACE, RING, STAR_HOME, DOOR_HOME, GODS, ZHI, JIEQI };
-export const STAGES = ['四柱节气', '阴阳定局', '布地盘', '旬首值符', '转天盘', '转人盘', '排八神', '空马格局', '古籍克应'];
+export const STAGES = ['四柱节气', '阴阳定局', '布地盘', '旬首值符', '转天盘', '转人盘', '排八神', '空马格局', '古籍克应', '流年太岁'];
 const KY_ORDER = [4, 9, 2, 3, 7, 8, 1, 6];
 export const moveMs = 380;
 const POS = { 4: [0, 0], 9: [1, 0], 2: [2, 0], 3: [0, 1], 5: [1, 1], 7: [2, 1], 8: [0, 2], 1: [1, 2], 6: [2, 2] };
-const SLOT = { god: [.2, .17], tian: [.8, .17], tian2: [.6, .17], star: [.5, .43], qin: [.5, .62], door: [.22, .8], di: [.8, .8], badge: [.5, .17], badge2: [.5, .3], diCenter: [.5, .5], ky: [.5, .93] };
+const SLOT = { god: [.2, .17], tian: [.8, .17], tian2: [.6, .17], star: [.5, .43], qin: [.5, .62], door: [.22, .8], di: [.8, .8], badge: [.5, .17], badge2: [.5, .3], diCenter: [.5, .5], ky: [.5, .93], sui: [.84, .5], ming: [.16, .5] };
 const P = (p) => `${QM.PALACE[p].gua}${p}宫`;
 const cn = (n) => '〇一二三四五六七八九'[n];
 
@@ -58,6 +59,7 @@ export function mount(host, C, sched) {
     C.steps.god.names.forEach((g, i) => mkChip('god' + i, 'god', g));
     mkChip('stamp', 'stamp', cn(C.steps.ju.ju) + '局');
     if (C.keying) for (const k of C.keying.palaces) mkChip('ky' + k.p, 'ky', k.gan[0] ? k.gan[0].name : '');
+    mkChip('sui', 'badge sui', '岁'); mkChip('ming', 'badge ming', '命');
     mkChip('kong', 'badge', '空'); mkChip('kong2', 'badge', '空'); mkChip('ma', 'badge ma', '马');
     for (let p = 1; p <= 9; p++) place(chips['di' + p], p, p === 5 ? 'diCenter' : 'di', false);
     for (const p of RING) { place(chips['star' + p], p, 'star', false); place(chips['tian' + p], p, 'tian', false); place(chips['door' + p], p, 'door', false); }
@@ -107,6 +109,15 @@ export function mount(host, C, sched) {
     if (k === 1) hl(S.ju.ju);
     if (k >= 7) $('board').classList.add('done');
     $('board').classList.toggle('keying', k >= 8 && !!C.keying);
+    const LN = C.liunian;
+    if (LN) {
+      const sp = LN.taisui.palaces[0];
+      chips.sui.textContent = '岁' + LN.taisui.gz[1];
+      if (sp) place(chips.sui, sp, 'sui', k >= 9); else chips.sui.classList.add('off');
+      const mp = LN.ming && LN.ming.palaces[0];
+      if (mp) place(chips.ming, mp, 'ming', k >= 9); else chips.ming.classList.add('off');
+      if (k === 9) { if (sp) hl(sp); if (LN.taisui.marked) LN.taisui.marked.forEach((p) => hl(p, 'hot')); }
+    }
     if (C.keying) for (const kp of C.keying.palaces) place(chips['ky' + kp.p], kp.p, 'ky', k >= 8);
     $('board').classList.toggle('filled', k >= 3);
     if (k === 3) { const xp = S.xun.xunPalace; hl(xp); chips['star' + xp].classList.add('key'); chips['door' + (xp === 5 ? C.steps.ju.ji : xp)].classList.add('key'); }
@@ -224,6 +235,25 @@ export function mount(host, C, sched) {
       C.patterns.filter((p) => p.palace && p.kind !== '平').forEach((pt, i) => later(1200 + 280 * i, () => hl(pt.palace, pt.kind === '吉' ? 'good' : 'hot')));
       later(1500 + 280 * C.patterns.length, done); return;
     }
+    if (k === 9) {
+      // 太岁逐年移宫：从前五年走到所选流年
+      const LN = C.liunian; if (!LN) { later(400, done); return; }
+      if (LN.taisui.mode === 'zhi') {
+        const Y = LN.taisui.year;
+        for (let i = 0; i <= 5; i++) later(200 + 420 * i, () => {
+          const yr = Y - 5 + i, z = yearGz(yr)[1];
+          chips.sui.textContent = '岁' + z; place(chips.sui, LN_ZP[z], 'sui', true);
+          clearHl(); hl(LN_ZP[z]);
+        });
+        later(200 + 420 * 6, () => { const mp = LN.ming && LN.ming.palaces[0]; if (mp) place(chips.ming, mp, 'ming', true); if (LN.taisui.marked) LN.taisui.marked.forEach((p) => hl(p, 'hot')); });
+        later(200 + 420 * 6 + 700, done);
+      } else {
+        const sp = LN.taisui.palaces[0]; if (sp) { place(chips.sui, sp, 'sui', true); hl(sp); }
+        later(500, () => { const mp = LN.ming && LN.ming.palaces[0]; if (mp) place(chips.ming, mp, 'ming', true); });
+        later(1100, done);
+      }
+      return;
+    }
     if (k === 8) {
       // 逐宫查克应：依洛书方位走一遍，亮起该宫并写上十干格名
       if (!C.keying) { later(500, done); return; }
@@ -288,6 +318,7 @@ export function explain(C, k) {
       <p>旬空 ${sm.kong.join('、')}，落${sm.kongPalaces.map(P).join('、')}；驿马在${sm.ma}，落${P(sm.maPalace)}。</p>
       ${C.patterns.length ? `<ul class="pat">${C.patterns.map((pt) => `<li><span class="tag ${pt.kind}">${pt.kind}</span><span><b>${pt.name}</b> ${pt.palace ? P(pt.palace) + '：' : ''}${pt.why}${pt.says ? `<br><small>依：${pt.says.join('；')}</small>` : ''}${pt.quote ? `<br><small>${esc(pt.quote)}</small>` : ''}</span></li>`).join('')}</ul>` : '<p>未识别到常见特殊格局。</p>'}`;
     if (k === 8) html = h(8, '古籍克应') + keyingHtml(C);
+    if (k === 9) html = h(9, '流年太岁') + (C.liunian ? liunianText(C, C.liunian).split('\n').map((l) => `<p>${esc(l.trim())}</p>`).join('') : '');
     return html;
   }
 
@@ -321,6 +352,7 @@ export function caption(C, k, question) {
       `八神随值符，自${P(S.god.start)}${S.god.clockwise ? '顺' : '逆'}排八宫`,
       `旬空${sm.kong.join('')}，驿马在${sm.ma}${C.patterns.length ? `，见${C.patterns.length}处格局` : ''}`,
       C.keying ? `逐宫查十干、八门克应：${C.keying.palaces.slice(0, 3).map((x) => x.gan[0] ? `${QM.PALACE[x.p].gua}宫<b>${x.gan[0].name}</b>` : '').filter(Boolean).join('、')}……` : '古籍克应已在设置中关闭',
+      C.liunian ? `${C.liunian.taisui.year} ${C.liunian.taisui.gz}年，太岁${C.liunian.taisui.palaces.length ? '临 <b>' + C.liunian.taisui.palaces.map(P).join('、') + '</b>' : '盘上未见'}${C.liunian.ming ? `；年命${C.liunian.ming.stem}在${C.liunian.ming.palaces.map(P).join('、') || '盘外'}` : ''}${C.liunian.topic.key !== 'general' ? `；占${C.liunian.topic.name}` : ''}` : '',
     ];
     return step + `<span>${k >= 0 ? t[k] : esc(C.input.text) + (question ? '　问：' + esc(question) : '')}</span>`;
   }

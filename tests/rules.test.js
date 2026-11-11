@@ -23,6 +23,7 @@ import * as AL from '../src/core/almanac.js';
 import { plain } from '../src/ui/history.js';
 import * as KY from '../src/arts/qimen/keying.js';
 import * as KD from '../src/arts/qimen/keying-data.js';
+import * as LN from '../src/arts/qimen/liunian.js';
 const QM = { ...astro, ...cal, ...qimen };
 
 let pass = 0, fail = 0;
@@ -549,6 +550,43 @@ for (const [yr, label, kook, gong, wc, home, sf, away, pats] of TY_CASES) {
     for (const x of C.patterns.filter((y) => y.name === '朱雀投江')) check('朱雀投江为丁加癸', /天盘丁.*加地盘癸/.test(x.why));
   }
   check('玉女守门样本', nYunu > 10, String(nYunu));
+}
+
+// ── 奇门流年与应期 ──
+{
+  const Z = '子丑寅卯辰巳午未申酉戌亥';
+  const Zs = [...Z];
+  check('六冲六对', Zs.flatMap((a, i) => Zs.slice(i + 1).filter((b) => LN.zhiRelations(a, b).includes('六冲'))).length === 6);
+  const has = (a, b, r) => LN.zhiRelations(a, b).includes(r) && LN.zhiRelations(b, a).includes(r);
+  check('六冲', has('子', '午', '六冲') && has('卯', '酉', '六冲') && has('巳', '亥', '六冲') && !has('子', '丑', '六冲'));
+  check('六合', has('子', '丑', '六合') && has('寅', '亥', '六合') && has('卯', '戌', '六合') && has('辰', '酉', '六合') && has('巳', '申', '六合') && has('午', '未', '六合'));
+  check('六害', has('子', '未', '六害') && has('丑', '午', '六害') && has('寅', '巳', '六害') && has('卯', '辰', '六害') && has('申', '亥', '六害') && has('酉', '戌', '六害'));
+  check('三合', has('申', '子', '三合') && has('子', '辰', '三合') && has('亥', '未', '三合') && has('寅', '戌', '三合') && has('巳', '丑', '三合') && !has('子', '卯', '三合'));
+  check('相刑', has('子', '卯', '相刑') && has('寅', '巳', '相刑') && has('巳', '申', '相刑') && has('申', '寅', '相刑') && has('丑', '戌', '相刑') && has('戌', '未', '相刑') && has('未', '丑', '相刑') && !has('子', '午', '相刑'));
+  check('自刑', ['辰', '午', '酉', '亥'].every((z) => LN.zhiRelations(z, z).includes('自刑')) && !LN.zhiRelations('子', '子').includes('自刑'));
+  check('流年干支', LN.yearGz(2026) === '丙午' && LN.yearGz(1984) === '甲子' && LN.yearGz(2027) === '丁未');
+  check('地支归宫', Object.entries(LN.PALACE_ZHI).every(([p, zs]) => zs.every((z) => LN.ZHI_PALACE[z] === +p)) && Object.keys(LN.ZHI_PALACE).length === 12);
+  for (let i = 0; i < 400; i++) {
+    const yr = 2000 + (i % 25), mon = 1 + (i * 5) % 12, day = 1 + (i * 3) % 28, h = (i * 7) % 24;
+    const topic = ['general', 'xingren', 'budao', 'jibing'][i % 4];
+    const ly = 2020 + (i % 12);
+    const C = qimen.chart(yr, mon, day, h, 0, { ln: { topic, year: String(ly), birth: i % 2 ? '1990' : '' } });
+    const L = C.liunian;
+    check('太岁宫为岁支之宫', L.taisui.palaces[0] === LN.ZHI_PALACE[LN.yearGz(ly)[1]]);
+    check('通用不推应期', topic !== 'general' || L.topic.items.length === 0);
+    check('年命', (i % 2 === 0) === !L.ming);
+    if (topic === 'xingren' || topic === 'budao') {
+      const yang = '甲丙戊庚壬'.includes(C.steps.pillars.day[0]);
+      for (const it of L.topic.items.filter((x) => x.p)) {
+        check('阳日看庚下、阴日看庚上', yang ? C.palaces[it.p].tianStems.includes('庚') : (C.palaces[it.p].di === '庚' || C.palaces[5].di === '庚'));
+        if (it.s === '乙') check('乙庚合不为格', /不为格/.test(it.verdict));
+        else if (C.palaces[it.p].kong) check('庚临空亡不为格', /不为格/.test(it.verdict));
+      }
+    }
+    const Cg = qimen.chart(yr, mon, day, h, 0, { taisui: 'gan', ln: { year: String(ly) } });
+    for (const p of Cg.liunian.taisui.palaces) check('岁干落宫', Cg.palaces[p].tianStems.includes(Cg.liunian.taisui.stem));
+    check('原文含流年', /流年与应期/.test(qimen.toText(C, '')));
+  }
 }
 
 console.log(`课体分布（${N} 课）：`, seen);

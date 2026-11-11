@@ -32,6 +32,8 @@
 .qm .chip.di { font-family: var(--f-display); font-weight: 700; font-size: clamp(15px, 2.6vw, 20px); color: var(--muted); }
 .qm .chip.badge { font-size: 10px; color: var(--surface); background: var(--cinnabar); padding: 1px 4px; border-radius: 3px; }
 .qm .chip.badge.ma { background: var(--jade); }
+.qm .chip.badge.sui { background: var(--gold); font-weight: 700; transition: left .35s ease, top .35s ease, opacity .3s; }
+.qm .chip.badge.ming { background: var(--accent); font-weight: 700; }
 .qm .chip.ky { font-size: clamp(9px, 1.5vw, 11px); color: var(--surface); background: var(--accent); padding: 0 5px; border-radius: 3px; white-space: nowrap; font-weight: 600; }
 .qm .board.keying .pname { visibility: hidden; }
 .explain h3 { font-size: 15px; margin: 10px 0 4px; }
