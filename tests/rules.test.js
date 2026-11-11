@@ -542,6 +542,9 @@ for (const [yr, label, kook, gong, wc, home, sf, away, pats] of TY_CASES) {
     for (const x of C.patterns.filter((y) => y.name === '虎遁')) check('虎遁有据', x.says.length > 0);
     // 每条格局都带出处与所依
     check('格局带出处', C.patterns.every((x) => x.says && x.says.length && x.quote));
+    check('悖格默认不含寄干', C.patterns.filter((x) => x.name === '悖格').every((x) => !/（寄）/.test(x.why)));
+    const Cj = qimen.chart(yr, mon, day, h, 30, { beiJi: true });
+    check('勾选后悖格不少于默认', Cj.patterns.filter((x) => x.name === '悖格').length >= C.patterns.filter((x) => x.name === '悖格').length);
     // 吉凶对称：青龙逃走与白虎猖狂不会出现在同一对干上
     for (const x of C.patterns.filter((y) => y.name === '朱雀投江')) check('朱雀投江为丁加癸', /天盘丁.*加地盘癸/.test(x.why));
   }

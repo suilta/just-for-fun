@@ -61,6 +61,8 @@ export default {
       { value: 'month', label: '按月令（默认）', desc: '古籍原意：以起局月的月支五行定九星旺相休囚废（《烟波钓叟歌》《御定奇门宝鉴》）。' },
       { value: 'palace', label: '按落宫', desc: '近人用法：以九星所落之宫的五行来定。' },
     ], what: '九星与八门不同，用“我生为旺、同行为相、我克为休、生我为废、克我为囚”。' },
+    { type: 'check', key: 'beiJi', label: '寄干与悖格', text: '中五寄来的干也参与悖格判定',
+      what: '悖格是天盘丙加地盘的年、月、日、时干。中五宫的干寄在别的宫，若值符星正好是带着寄干的那颗星，寄干会随值符每个时辰都落在时干上，整旬每时都成悖格。默认不让寄干参与悖格；其余格局与十干克应仍照算寄干。' },
     DAY_CHANGE_FIELD('传统时家奇门多用这种。'),
     ...solarFields('用真太阳时定日柱、时柱', '起局地东经', '只影响日柱和时柱。'),
   ],
@@ -77,6 +79,11 @@ export default {
       yuan: { same: allSame, html: `按你填的时间：${r.map((x) => `${x[0]} ${x[1]}`).join('，')}。` + (allSame ? '<b>三种方法结果相同，选哪个都一样。</b>' : '<b>结果不同，整张盘会不一样。</b>') },
       ji: { same: k1 === k2, html: k1 === k2 ? `按你填的时间：${yang ? '虽是阳遁，但' : '这是阴遁，两种寄法都寄坤二，'}<b>两种寄法排出的盘完全一样。</b>` : '按你填的时间：这是阳遁，<b>两种寄法排出的盘不同</b>（天禽和寄宫相关的星、门位置会变）。' },
       gods: { same: true, html: '<b>只影响两个名字，盘面位置不变。</b>' },
+      beiJi: (() => {
+        const n = (v) => ch({ beiJi: v }).patterns.filter((x) => x.name === '悖格').length;
+        const on = n(true), off = n(false);
+        return { same: on === off, html: on === off ? '按你填的时间：<b>寄干不涉及悖格，勾选与否结果相同。</b>' : `按你填的时间：勾选后悖格由 ${off} 条变为 <b>${on} 条</b>。` };
+      })(),
       keying: { same: true, html: '<b>只影响原文里的克应段落和第 9 步动画，盘面不变。</b>' },
       overlay: (() => {
         const c = ch({ keying: true, overlay: true }); const n = c.keying.palaces.reduce((a, k) => a + k.overlay.length, 0);

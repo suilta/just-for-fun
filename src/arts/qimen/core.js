@@ -52,6 +52,7 @@ const DEFAULT_OPTS = {
   keying: true,     // 列出古籍克应条文
   overlay: true,    // 值符真甲叠加（《烟波》《宝鉴》）
   starState: 'month', // 九星旺衰：month 按月令 / palace 按落宫
+  beiJi: false,     // 寄干是否参与悖格判定
 };
 const OPT_TEXT = {
   yuan: { chaibu: '拆补法', zhirun: '置闰法', maoshan: '茅山法' },
